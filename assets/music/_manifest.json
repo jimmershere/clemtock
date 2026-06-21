@@ -1,0 +1,20 @@
+[
+  {
+    "genre": "momentous",
+    "file": "assets/music/momentous/maelstrom-the-passage.mp3",
+    "title": "Maelstrom - The Passage",
+    "license": "CC0 1.0 (public domain)",
+    "attribution_required": false,
+    "source": "https://archive.org/details/gt536Maelstrom-ThePassage"
+  },
+  {
+    "genre": "classic-rock",
+    "file": "assets/music/classic-rock/nicolas-falcon-aaahh.mp3",
+    "title": "Aaahh",
+    "creator": "Nicolas Falcon",
+    "license": "CC BY 3.0",
+    "attribution_required": true,
+    "attribution": "\"Aaahh\" by Nicolas Falcon, CC BY 3.0",
+    "source": "https://archive.org/details/NicolasFalcon-NicolasFalconaaahh011"
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "recipes": [
+    {
+      "id": "snip-music",
+      "name": "Snip + Music",
+      "desc": "Short, punchy montage of image snips / short clips with Ken-Burns motion over a music bed. Minimal or no voice. Great for feed/story social ads.",
+      "format": { "duration": 12, "voice": false, "music": true, "motion": "kenburns", "scenes": 5 },
+      "scene_plan": ["title", "photo", "photo", "split", "cta"],
+      "brief_hint": "Build a fast, energetic 12s vertical social ad: a title card, three image beats with Ken-Burns motion, end on a CTA. No voice-over; assume a music bed. Keep copy to short punchy lines."
+    },
+    {
+      "id": "motion-tutorial",
+      "name": "Full-Motion Tutorial",
+      "desc": "Longer narrated spot with a talking avatar/model, real motion clips, captions and a walkthrough feel. Best for explainer / how-it-works ads.",
+      "format": { "duration": 40, "voice": true, "music": true, "avatar": true, "motion": "video", "scenes": 6 },
+      "scene_plan": ["title", "video", "split", "terminal", "video", "cta"],
+      "brief_hint": "Build a ~40s vertical explainer ad: open on a title, then alternate real motion clips and a talking spokesperson (model) walking through the product, with captioned steps and a terminal/proof beat, ending on a CTA. Voice-over on; music bed under."
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "canvas": { "width": 1080, "height": 1920 }, "fps": 30, "duration": 18,
+  "palette": { "ink": "#0B1018", "cream": "#ECE4D2", "lime": "#A6E84A", "orange": "#EF6A28", "muted": "#93A6BC", "text": "#E7EBEF", "line": "#22324C", "line2": "#2E4150" },
+  "assets": {
+    "kie":    { "kind": "video",  "source": "upload", "src": "out/kie-sample.mp4" },
+    "spokes": { "kind": "avatar", "source": "upload", "src": "out/clem-avatar.mp4" }
+  },
+  "scenes": [
+    { "id": "open",  "start": 0,    "end": 2.5,  "template": "title",
+      "copy": { "kicker": "// UNION-MADE ORCHESTRATION", "headline": "THIS IS\nLOCAL 81.", "sub": "Plan it. Deploy it. Hold the line." } },
+    { "id": "clip",  "start": 2.5,  "end": 7.5,  "template": "video", "assets": ["kie"],
+      "copy": { "headline": "MEET CLEM." } },
+    { "id": "term",  "start": 7.5,  "end": 10.5, "template": "terminal",
+      "copy": { "kicker": "// ONE PUSH", "headline": "local81 deploy --latest --forks 10", "sub": "ok=10  changed=10  failed=0\n✓ deploy finished cleanly." } },
+    { "id": "spokes","start": 10.5, "end": 14.8, "template": "video", "assets": ["spokes"],
+      "copy": {} },
+    { "id": "close", "start": 14.8, "end": 18,   "template": "cta",
+      "copy": { "headline": "LOCAL 81", "sub": "BUILT IN PORT. PROVEN AT SEA.", "cta": "github.com/jimmershere/local81" } }
+  ]
+}

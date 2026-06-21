@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "duration": 15,
+  "palette": {
+    "primary": "#FF6B35",
+    "secondary": "#004E89",
+    "accent": "#F7B801",
+    "background": "#1A1A2E",
+    "text": "#FFFFFF"
+  },
+  "assets": {
+    "clem-intro": {
+      "kind": "image",
+      "source": "upload",
+      "src": "assets/clem-intro.png"
+    },
+    "hero": {
+      "kind": "image",
+      "source": "upload",
+      "src": "assets/hero.png"
+    },
+    "lib-jimmer": {
+      "kind": "image",
+      "source": "upload",
+      "src": "assets/lib-jimmer.png"
+    },
+    "lib-l81-clem": {
+      "kind": "image",
+      "source": "upload",
+      "src": "assets/lib-l81-clem.png"
+    },
+    "tools-grid": {
+      "kind": "image",
+      "source": "upload",
+      "src": "assets/tools-grid.png"
+    },
+    "orchestra-action": {
+      "kind": "image",
+      "source": "gen",
+      "provider": "gpt-image-1",
+      "prompt": "Dynamic industrial tech workspace with servers, cables, and monitoring screens in action, blue-collar IT aesthetic, high contrast dramatic lighting, wide angle",
+      "src": "assets/orchestra-action.png"
+    }
+  },
+  "scenes": [
+    {
+      "id": "title",
+      "start": 0,
+      "end": 2.5,
+      "template": "title",
+      "copy": "LOCAL-81\nFULLY BAKED ORCHESTRATION",
+      "motion": "impact"
+    },
+    {
+      "id": "hero-intro",
+      "start": 2.5,
+      "end": 5.5,
+      "template": "photo",
+      "asset": "lib-l81-clem",
+      "motion": "ken-burns-zoom",
+      "copy": "MEET CLEM\nYOUR INFRASTRUCTURE CAPTAIN"
+    },
+    {
+      "id": "tools-power",
+      "start": 5.5,
+      "end": 8.5,
+      "template": "photo",
+      "asset": "tools-grid",
+      "motion": "ken-burns-pan",
+      "copy": "ENTERPRISE TOOLS\nBLUE-COLLAR GRIT"
+    },
+    {
+      "id": "action-beat",
+      "start": 8.5,
+      "end": 11.5,
+      "template": "photo",
+      "asset": "orchestra-action",
+      "motion": "ken-burns-zoom",
+      "copy": "ORCHESTRATION THAT WORKS\nNO EXCUSES"
+    },
+    {
+      "id": "cta",
+      "start": 11.5,
+      "end": 15,
+      "template": "cta",
+      "copy": "GET FULLY BAKED\nLOCAL-81.IO",
+      "action": "Visit Local-81.io"
+    }
+  ]
+}

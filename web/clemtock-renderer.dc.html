@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<script src="./templates.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Saira+Stencil+One&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#06090e;overflow:hidden}
+  .ctrange{-webkit-appearance:none;appearance:none;height:4px;border-radius:4px;outline:none;cursor:pointer;background:#22324C}
+  .ctrange::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#A6E84A;cursor:pointer;box-shadow:0 0 0 3px rgba(166,232,74,.25)}
+  .ctrange::-moz-range-thumb{width:14px;height:14px;border:none;border-radius:50%;background:#A6E84A;cursor:pointer}
+</style>
+</helmet>
+<div id="ct-root" style="position:fixed;inset:0;background:#06090e;display:flex;align-items:center;justify-content:center;overflow:hidden;font-family:'Saira Condensed',sans-serif">
+  <div style="position:absolute;inset:0">
+    <div ref="{{ setStage }}" data-screen-label="{{ label }}" style="position:absolute;left:50%;top:50%;width:1080px;height:1920px;transform:translate(-50%,-50%);transform-origin:center center;background:#0B1018;overflow:hidden;box-shadow:0 40px 120px rgba(0,0,0,.6)">
+      {{ frame }}
+    </div>
+  </div>
+  <div id="ct-controls" style="position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:14px;padding:10px 16px;border-radius:999px;background:rgba(11,16,24,.82);border:1px solid #22324C;backdrop-filter:blur(8px)">
+    <button onClick="{{ onToggle }}" style="width:34px;height:34px;border-radius:50%;border:1px solid #2E4150;background:#16212F;color:#A6E84A;font-size:13px;cursor:pointer;font-family:'JetBrains Mono',monospace">{{ playLabel }}</button>
+    <input class="ctrange" type="range" min="0" max="{{ dur }}" step="0.01" value="{{ t }}" onInput="{{ onScrub }}" style="width:260px">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#93A6BC;min-width:78px">{{ tlabel }}</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1080, &quot;height&quot;: 1920 },
+  &quot;src&quot;: { &quot;editor&quot;: &quot;string&quot;, &quot;default&quot;: &quot;ad-script.json&quot;, &quot;tsType&quot;: &quot;string&quot; },
+  &quot;speed&quot;: { &quot;editor&quot;: &quot;float&quot;, &quot;default&quot;: 1, &quot;min&quot;: 0.4, &quot;max&quot;: 1.4, &quot;step&quot;: 0.05, &quot;tsType&quot;: &quot;number&quot; }
+}">
+class Component extends DCLogic {
+  state = { t: 0, playing: true, doc: null, err: null };
+
+  constructor(props){
+    super(props);
+    this.DEFAULT_DUR = 15;
+    this.F = { mono:'"JetBrains Mono",monospace', cond:'"Saira Condensed",sans-serif', sten:'"Saira Stencil One",sans-serif' };
+    this.DEFAULT_C = { ink:'#0B1018', cream:'#ECE4D2', text:'#E7EBEF', muted:'#93A6BC',
+      lime:'#A6E84A', orange:'#EF6A28', line:'#22324C', line2:'#2E4150' };
+  }
+
+  /* ---- lifecycle ---- */
+  componentDidMount(){
+    this._alpha = !!window.__CLEMTOCK_ALPHA__;  // compositing mode: transparent bg, clips become holes
+    this.loadScript();
+    this._last = performance.now();
+    this._raf = requestAnimationFrame(this.tick);
+    window.addEventListener('resize', this.fit);
+    requestAnimationFrame(this.fit);
+  }
+  componentWillUnmount(){ cancelAnimationFrame(this._raf); window.removeEventListener('resize', this.fit); }
+
+  loadScript(){
+    // headless renderer injects the script directly to render any ad-script without a fetch
+    if (window.__CLEMTOCK_SCRIPT__){ this.setState({doc: window.__CLEMTOCK_SCRIPT__, err:null}); return; }
+    const src = this.props.src || 'ad-script.json';
+    fetch(src, {cache:'no-store'}).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(doc=>this.setState({doc, err:null}))
+      .catch(e=>this.setState({err:String(e.message||e)}));
+  }
+
+  dur(){ const d=this.state.doc; return d && d.duration ? d.duration : this.DEFAULT_DUR; }
+
+  tick=(now)=>{
+    const sp = this.props.speed!=null ? this.props.speed : 1;
+    const dt = Math.min(0.05,(now-this._last)/1000)*sp; this._last=now;
+    if(this.state.playing && this.state.doc){
+      let t=this.state.t+dt; if(t>=this.dur()) t=t%this.dur();
+      this.setState({t});
+    }
+    this._raf=requestAnimationFrame(this.tick);
+  }
+  setStage=(el)=>{ this.stageEl=el; if(el) requestAnimationFrame(this.fit); }
+  fit=()=>{ const el=this.stageEl; if(!el||!el.parentElement) return; const p=el.parentElement;
+    const s=Math.min(p.clientWidth/1080, p.clientHeight/1920);
+    el.style.transform='translate(-50%,-50%) scale('+s+')'; }
+
+  /* ---- math + shells (shared with templates via ctx) ---- */
+  prog=(t,a,b)=>Math.max(0,Math.min(1,(t-a)/(b-a)));
+  lerp=(a,b,x)=>a+(b-a)*x;
+  eo=(x)=>1-Math.pow(1-x,3);
+  eio=(x)=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+  back=(x)=>{const c=2.0,c3=c+1;return 1+c3*Math.pow(x-1,3)+c*Math.pow(x-1,2);};
+  stamp=(p)=>this.lerp(1.18,1,this.eo(p));
+
+  palette(){ return Object.assign({}, this.DEFAULT_C, (this.state.doc && this.state.doc.palette) || {}); }
+
+  bg=(tint)=>{ const h=React.createElement, C=this.palette();
+    return [
+      // in alpha/compositing mode the solid ink fill is provided by the ffmpeg base layer
+      this._alpha?null:h('div',{key:'b',style:{position:'absolute',inset:0,background:C.ink}}),
+      h('div',{key:'g',style:{position:'absolute',inset:0,backgroundImage:'linear-gradient(rgba(34,50,76,.45) 1px,transparent 1px),linear-gradient(90deg,rgba(34,50,76,.45) 1px,transparent 1px)',backgroundSize:'64px 64px'}}),
+      tint?h('div',{key:'t',style:{position:'absolute',inset:0,background:tint}}):null,
+      h('div',{key:'v',style:{position:'absolute',inset:0,background:'radial-gradient(120% 75% at 50% 42%,transparent 38%,rgba(0,0,0,.72))'}})
+    ];
+  }
+  txt=(key,str,style)=>React.createElement('div',{key,style},str);
+
+  ctx(){ return {
+    C:this.palette(), F:this.F, assets:(this.state.doc&&this.state.doc.assets)||{},
+    canvas:(this.state.doc&&this.state.doc.canvas)||{width:1080,height:1920},
+    prog:this.prog, lerp:this.lerp, eo:this.eo, eio:this.eio, back:this.back, stamp:this.stamp,
+    bg:this.bg, txt:this.txt, alpha:this._alpha
+  }; }
+
+  /* ---- scene window (fade in/out), generalized from the promo's scene() ---- */
+  sceneWindow(scene, build){
+    const h=React.createElement; const t=this.state.t;
+    const fi = scene.fadeIn!=null?scene.fadeIn:0.12;
+    const fo = scene.fadeOut!=null?scene.fadeOut:0.12;
+    let o=0;
+    if(t>=scene.start-fi && t<scene.end+fo)
+      o=Math.min(this.prog(t,scene.start-fi,scene.start), 1-this.prog(t,scene.end,scene.end+fo));
+    const vis=o>0.002;
+    return h('div',{key:'sc_'+scene.id,style:{position:'absolute',inset:0,opacity:vis?o:0,visibility:vis?'visible':'hidden',overflow:'hidden'}}, vis?build(t):null);
+  }
+
+  // tolerate LLM output variance: copy may be a string (-> headline), assets may be a single `asset`
+  normScene(s){
+    const scene = Object.assign({}, s);
+    if (typeof scene.copy === 'string') scene.copy = { headline: scene.copy };
+    if (!Array.isArray(scene.assets)){
+      const one = scene.asset || scene.assetId || scene.imageId || scene.image || scene.media;
+      if (one) scene.assets = [one];
+    }
+    if (typeof scene.motion === 'string') scene.motion = { type: scene.motion };
+    return scene;
+  }
+
+  buildFrame(){ const h=React.createElement;
+    if(this.state.err)
+      return h('div',{style:{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',color:'#FF5A4D',fontFamily:this.F.mono,fontSize:34,padding:60,textAlign:'center'}},'ad-script load error: '+this.state.err);
+    if(!this.state.doc)
+      return h('div',{style:{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',color:'#93A6BC',fontFamily:this.F.mono,fontSize:34}},'loading ad-script…');
+
+    const reg = window.CLEMTOCK_TEMPLATES || {};
+    const ctx = this.ctx();
+    const scenes = (this.state.doc.scenes||[]).map((raw)=>{
+      const scene = this.normScene(raw);
+      const tpl = reg[scene.template];
+      return this.sceneWindow(scene, (t)=>{
+        if(!tpl) return h('div',{style:{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',color:'#F2B23E',fontFamily:this.F.mono,fontSize:30}},'unknown template: '+scene.template);
+        try { return tpl(h, t, scene, ctx); }
+        catch(e){ return h('div',{style:{position:'absolute',top:40,left:40,color:'#FF5A4D',fontFamily:this.F.mono,fontSize:24}},scene.template+' error: '+(e.message||e)); }
+      });
+    });
+    return h('div',{style:{position:'absolute',inset:0,overflow:'hidden'}},[
+      h('div',{key:'safe',style:{position:'absolute',inset:0,transform:'scale(0.92)',transformOrigin:'center center'}}, scenes)
+    ]);
+  }
+
+  renderVals(){ const t=this.state.t; const dur=this.dur();
+    const sec=Math.floor(t), fr=Math.floor((t-sec)*30);
+    return {
+      frame: this.buildFrame(),
+      setStage: this.setStage,
+      label: 't '+t.toFixed(1)+'s',
+      t: t, dur: dur,
+      playLabel: this.state.playing?'❚❚':'▶',
+      tlabel: String(sec).padStart(2,'0')+':'+String(fr).padStart(2,'0')+' / '+dur.toFixed(0),
+      onToggle: ()=>this.setState(s=>({playing:!s.playing})),
+      onScrub: (e)=>{ const v=parseFloat(e.target.value); this.setState({playing:false,t:v}); }
+    };
+  }
+}
+</script>
+</body>
+</html>

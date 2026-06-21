@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>clemtock</title>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Saira Condensed',sans-serif;background:#06090e;color:#E7EBEF;min-height:100vh;
+    background-image:linear-gradient(rgba(34,50,76,.35) 1px,transparent 1px),linear-gradient(90deg,rgba(34,50,76,.35) 1px,transparent 1px);
+    background-size:48px 48px;display:flex;align-items:center;justify-content:center;padding:40px}
+  .card{max-width:720px;width:100%}
+  .kick{font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:4px;color:#A6E84A;text-transform:uppercase}
+  h1{font-weight:800;font-size:72px;line-height:.95;letter-spacing:-2px;margin:8px 0 6px}
+  h1 span{color:#EF6A28}
+  p.sub{color:#93A6BC;font-size:19px;line-height:1.5;max-width:52ch;margin-bottom:30px}
+  .links{display:grid;gap:14px}
+  a.tile{display:flex;align-items:center;gap:16px;text-decoration:none;color:#E7EBEF;
+    background:#121C2A;border:1px solid #2E4150;border-radius:14px;padding:20px 24px;transition:.15s}
+  a.tile:hover{border-color:#A6E84A;background:#16212F}
+  a.tile .t{font-weight:700;font-size:24px}
+  a.tile .d{font-family:'JetBrains Mono',monospace;font-size:13px;color:#93A6BC}
+  a.tile .arrow{margin-left:auto;color:#A6E84A;font-size:24px}
+  .host{margin-top:26px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#6E8094}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="kick">Built in Port · Proven at Sea</div>
+    <h1>clem<span>tock</span></h1>
+    <p class="sub">Prompt-driven social-media ad generator. Render and host run here on floor2.</p>
+    <div class="links">
+      <a class="tile" href="clemtock-renderer.dc.html">
+        <div><div class="t">Preview the current ad</div><div class="d">scrub web/ad-script.json live · 1080×1920</div></div>
+        <div class="arrow">→</div>
+      </a>
+      <a class="tile" href="render-mp4.html">
+        <div><div class="t">Export in-browser</div><div class="d">WebCodecs / WebM download</div></div>
+        <div class="arrow">→</div>
+      </a>
+      <a class="tile" href="out/">
+        <div><div class="t">Rendered MP4s</div><div class="d">server-side exports (clemtock export → out/)</div></div>
+        <div class="arrow">→</div>
+      </a>
+    </div>
+    <div class="host">serving /home/floor2/clemtock/web · 192.168.1.206:8910</div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "canvas": {
+    "width": 1080,
+    "height": 1920
+  },
+  "fps": 30,
+  "duration": 4,
+  "palette": {
+    "ink": "#0B1018",
+    "cream": "#ECE4D2",
+    "lime": "#A6E84A",
+    "orange": "#EF6A28",
+    "muted": "#93A6BC",
+    "line2": "#2E4150"
+  },
+  "assets": {
+    "hero": {
+      "kind": "image",
+      "source": "gen",
+      "provider": "gpt-image-1",
+      "aspect": "9:16",
+      "prompt": "Cinematic vertical product hero shot of a rugged orange industrial hard hat sitting on a dark steel workbench, dramatic lime-green rim lighting, moody navy background, photorealistic, high contrast",
+      "src": "assets/hero.png"
+    }
+  },
+  "scenes": [
+    {
+      "id": "hero",
+      "start": 0,
+      "end": 4,
+      "template": "photo",
+      "assets": [
+        "hero"
+      ],
+      "copy": {
+        "headline": "BUILT TOUGH."
+      },
+      "motion": {
+        "type": "kenburns",
+        "from": 1.0,
+        "to": 1.12
+      }
+    }
+  ]
+}

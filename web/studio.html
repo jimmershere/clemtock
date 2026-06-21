@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>clemtock studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#0B1018;--ink2:#0E1620;--panel:#121C2A;--panel2:#16212F;--line:#22324C;--line2:#2E4150;
+    --lime:#A6E84A;--orange:#EF6A28;--cream:#ECE4D2;--text:#E7EBEF;--muted:#93A6BC;--red:#FF5A4D}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Saira Condensed',sans-serif;background:var(--ink);color:var(--text);min-height:100vh;
+    background-image:linear-gradient(rgba(34,50,76,.25) 1px,transparent 1px),linear-gradient(90deg,rgba(34,50,76,.25) 1px,transparent 1px);
+    background-size:48px 48px}
+  header{display:flex;align-items:center;gap:14px;padding:18px 28px;border-bottom:1px solid var(--line)}
+  header .mark{font-weight:800;font-size:30px;letter-spacing:-1px}.mark span{color:var(--orange)}
+  header .kick{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--lime);text-transform:uppercase}
+  .wrap{display:grid;grid-template-columns:1.25fr 1fr;gap:22px;padding:22px 28px;max-width:1320px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
+  h2{font-size:13px;font-family:'JetBrains Mono',monospace;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:14px}
+  .recipes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+  .recipe{border:1px solid var(--line2);border-radius:12px;padding:14px;cursor:pointer;transition:.12s;background:var(--panel2)}
+  .recipe:hover{border-color:var(--lime)}.recipe.sel{border-color:var(--lime);box-shadow:0 0 0 1px var(--lime) inset}
+  .recipe .t{font-weight:700;font-size:20px}.recipe .d{font-size:13.5px;color:var(--muted);line-height:1.4;margin-top:6px}
+  .recipe .meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--lime);margin-top:8px}
+  label.fl{display:block;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--muted);margin:14px 0 7px;text-transform:uppercase}
+  textarea,input,select{width:100%;background:var(--ink2);border:1px solid var(--line2);border-radius:9px;color:var(--text);
+    font-family:'Saira Condensed',sans-serif;font-size:16px;padding:11px 13px}
+  textarea{min-height:74px;resize:vertical}
+  .slot h3{font-size:14px;margin-bottom:8px;color:var(--cream)}
+  .thumbs{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:6px}
+  .th{width:64px;height:64px;border-radius:9px;overflow:hidden;border:2px solid var(--line2);cursor:pointer;background:var(--ink2);flex:0 0 auto;position:relative}
+  .th img{width:100%;height:100%;object-fit:cover}.th.sel{border-color:var(--lime)}
+  .th .nm{position:absolute;inset:auto 0 0 0;font-size:9px;background:rgba(0,0,0,.6);color:var(--cream);text-align:center;padding:1px}
+  .models{display:flex;gap:9px;flex-wrap:wrap}
+  label.up{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--lime);border:1px dashed var(--line2);border-radius:8px;padding:8px 13px;cursor:pointer}
+  label.up:hover{border-color:var(--lime)}
+  .chip{font-family:'JetBrains Mono',monospace;font-size:12px;border:1px solid var(--line2);border-radius:999px;padding:7px 13px;cursor:pointer;color:var(--cream)}
+  .chip.sel{border-color:var(--lime);color:var(--lime)}
+  button.go{margin-top:18px;width:100%;font-weight:800;font-size:21px;color:#10210a;background:var(--lime);border:0;border-radius:11px;padding:15px;cursor:pointer;box-shadow:0 0 30px rgba(166,232,74,.3)}
+  button.go:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+  .cli{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);background:var(--ink2);border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:12px;word-break:break-all;white-space:pre-wrap}
+  .log{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--cream);background:#06090e;border:1px solid var(--line);border-radius:9px;padding:12px;height:230px;overflow:auto;white-space:pre-wrap}
+  .status{font-family:'JetBrains Mono',monospace;font-size:12px;margin:8px 0;color:var(--muted)}
+  .status b.run{color:var(--lime)}.status b.fail{color:var(--red)}.status b.done{color:var(--lime)}
+  video{width:100%;border-radius:11px;border:1px solid var(--line2);margin-top:12px;background:#000}
+  .outs{display:flex;flex-direction:column;gap:7px;margin-top:8px;max-height:170px;overflow:auto}
+  .out{display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--cream);
+    border:1px solid var(--line);border-radius:8px;padding:8px 11px;cursor:pointer}
+  .out:hover{border-color:var(--lime)}.out .sz{margin-left:auto;color:var(--muted)}
+  details{margin-top:16px}summary{cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)}
+  .adv{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.adv select,.adv input{width:auto;flex:1;min-width:120px}
+  .adv button{background:var(--panel2);border:1px solid var(--line2);color:var(--cream);border-radius:8px;padding:9px 14px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:12px}
+  @media(max-width:920px){.wrap{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="kick">Built in Port · Proven at Sea</div>
+    <div class="mark">clem<span>tock</span> studio</div>
+  </div>
+  <div style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)" id="health">·</div>
+</header>
+
+<div class="wrap">
+  <!-- LEFT: build an ad -->
+  <div class="card">
+    <h2>1 · Format</h2>
+    <div class="recipes" id="recipes"></div>
+
+    <h2>2 · Cast</h2>
+    <div class="slot"><h3>Hero <span style="color:var(--muted);font-size:12px">— mascot / focal</span></h3><div class="thumbs" id="hero"></div></div>
+    <div class="slot"><h3>Character <span style="color:var(--muted);font-size:12px">— persona</span></h3><div class="thumbs" id="character"></div></div>
+    <div class="slot"><h3>Model <span style="color:var(--muted);font-size:12px">— talking avatar</span></h3><div class="models" id="model"></div></div>
+
+    <div class="slot">
+      <h3>References <span style="color:var(--muted);font-size:12px">— uploads / drop-ins (pick up to 3)</span></h3>
+      <div class="thumbs" id="refs"></div>
+      <label class="up" id="uplabel">+ upload images (max 3)
+        <input id="upload" type="file" accept="image/*" multiple style="display:none">
+      </label>
+    </div>
+
+    <label class="fl">3 · Brief</label>
+    <textarea id="prompt" placeholder="e.g. Bold social ad for Local 81 — gritty union-shop energy, end on the GitHub CTA"></textarea>
+    <div style="display:flex;gap:12px">
+      <div style="flex:1"><label class="fl">Duration (s)</label><input id="duration" type="number" value="12"></div>
+      <div style="flex:1"><label class="fl">Output name</label><input id="name" placeholder="my-ad"></div>
+    </div>
+
+    <button class="go" id="build">▶ Build ad</button>
+    <div class="cli" id="cli">clemtock run — pick a format to see the CLI equivalent</div>
+
+    <details>
+      <summary>Advanced · run any clemtock command (for power users + AI)</summary>
+      <div class="adv">
+        <select id="advcmd"><option>script</option><option>assets</option><option>compose</option><option>patch</option><option>music</option><option selected>video</option><option>avatar</option><option>export</option><option>probe</option></select>
+        <input id="advargs" placeholder="--script web/ad-script.json --out out/x.mp4">
+        <button id="advrun">run</button>
+        <button id="rescan" title="Re-scan the assets dir now">⟳ rescan assets</button>
+      </div>
+
+      <div class="adv" style="margin-top:12px;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex-basis:100%;color:var(--muted);font-size:12px;margin-bottom:2px">
+          Tweak one scene — change a single beat without re-authoring the run (the prior ad-script is backed up first)</div>
+        <div><label class="fl">Scene id</label><input id="pscene" style="width:120px" placeholder="beat-1"></div>
+        <div><label class="fl">Template</label>
+          <select id="ptpl"><option value="">— keep —</option><option>title</option><option>photo</option><option>video</option><option>terminal</option><option>split</option><option>cta</option></select></div>
+        <div><label class="fl">Fit</label>
+          <select id="pfit"><option value="">— keep —</option><option>cover</option><option>contain</option></select></div>
+        <div style="flex:1;min-width:160px"><label class="fl">Headline copy</label><input id="phead" placeholder="(optional) new headline"></div>
+        <div style="flex:1;min-width:160px"><label class="fl">Media (asset id or path)</label><input id="passet" placeholder="(optional) e.g. deploy_fleet"></div>
+        <label class="fl" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input id="precompose" type="checkbox" checked> re-render after</label>
+        <button id="patchrun" title="Patch this scene">✎ tweak scene</button>
+      </div>
+    </details>
+  </div>
+
+  <!-- RIGHT: job + outputs -->
+  <div class="card">
+    <h2>Job</h2>
+    <div class="status" id="status">idle</div>
+    <div class="log" id="log">Pick a format, cast, and brief on the left, then Build ad.
+The job runs on floor2; logs stream here.</div>
+    <video id="player" controls style="display:none"></video>
+
+    <h2 style="margin-top:18px">Rendered ads</h2>
+    <div class="outs" id="outs"></div>
+
+    <h2 style="margin-top:18px">Publish <span style="color:var(--muted);font-size:11px;text-transform:none">— dry-run is safe; live posting asks first</span></h2>
+    <div id="pub" style="opacity:.55">
+      <div class="status" id="pubsel">pick a rendered ad above to publish it</div>
+      <label class="fl">Platforms</label>
+      <div class="thumbs" id="pubplats" style="gap:7px">
+        <span class="chip" data-plat="tiktok">TikTok</span>
+        <span class="chip" data-plat="youtube">YouTube</span>
+        <span class="chip" data-plat="facebook">Facebook</span>
+        <span class="chip" data-plat="instagram">Instagram</span>
+        <span class="chip" data-plat="x">X</span>
+        <span class="chip" data-plat="lemon8">Lemon8</span>
+        <span class="chip" data-plat="threads">Threads</span>
+      </div>
+      <label class="fl" style="margin-top:12px">Music bed <span style="color:var(--muted);text-transform:none">— optional; baked into non-TikTok posts</span></label>
+      <select id="pubmusic"><option value="">— no music —</option></select>
+      <div id="pubmusicnote" style="font-size:11.5px;color:var(--muted);margin-top:5px"></div>
+      <label class="fl" style="margin-top:12px">Caption</label>
+      <textarea id="pubcap" style="min-height:54px" placeholder="Caption for the post…"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px">
+        <button id="pubdry" class="adv" style="flex:1">▷ dry-run</button>
+        <button id="publive" style="flex:1;background:var(--orange);border:0;color:#1a0c03;font-weight:800;border-radius:8px;padding:9px;cursor:pointer">⤴ publish live</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let LIB=null, RECIPES=null, sel={recipe:null,hero:null,character:null,model:null,references:[]}, pollTimer=null;
+
+async function j(u,o){ const r=await fetch(u,o); return r.json(); }
+
+async function boot(){
+  try{ const h=await j('/api/health'); $('#health').textContent='● online · '+h.jobs+' jobs'; }catch(e){ $('#health').textContent='● offline'; }
+  await loadLibrary(); RECIPES = await j('/api/recipes');
+  renderRecipes(); renderCast(); refreshOutputs(); loadMusic(); bindPublish();
+}
+async function loadMusic(){
+  try{
+    const m = await j('/api/music'); const sel=$('#pubmusic');
+    const byGenre={}; (m.tracks||[]).forEach(t=>{ (byGenre[t.genre]=byGenre[t.genre]||[]).push(t); });
+    let html='<option value="">— no music —</option>';
+    Object.keys(byGenre).sort().forEach(g=>{
+      html+=`<optgroup label="${g}">`+byGenre[g].map(t=>`<option value="${t.id}">${t.name}</option>`).join('')+'</optgroup>';
+    });
+    sel.innerHTML=html;
+  }catch(e){}
+}
+async function loadLibrary(){ LIB = await j('/api/library'); }
+function renderRecipes(){
+  $('#recipes').innerHTML = RECIPES.recipes.map(r=>`
+    <div class="recipe" data-id="${r.id}">
+      <div class="t">${r.name}</div><div class="d">${r.desc}</div>
+      <div class="meta">${r.format.duration}s · ${r.format.voice?'voice':'no voice'} · ${r.format.music?'music':'silent'} · ${r.format.scenes} scenes</div>
+    </div>`).join('');
+  document.querySelectorAll('.recipe').forEach(el=>el.onclick=()=>{
+    sel.recipe=el.dataset.id; document.querySelectorAll('.recipe').forEach(x=>x.classList.remove('sel')); el.classList.add('sel');
+    const r=RECIPES.recipes.find(x=>x.id===sel.recipe); $('#duration').value=r.format.duration; updateCli();
+  });
+}
+function thumbsFor(role){
+  return LIB.assets.filter(a=>a.roles.includes(role)).map(a=>`
+    <div class="th" data-id="${a.id}" title="${a.name}"><img src="/library/${a.thumb}"><span class="nm">${a.name.split('—')[0].trim()}</span></div>`).join('');
+}
+function renderCast(){
+  $('#hero').innerHTML = thumbsFor('hero');
+  $('#character').innerHTML = thumbsFor('character');
+  $('#model').innerHTML = LIB.models.map(m=>`<div class="chip" data-id="${m.id}">${m.name}</div>`).join('');
+  $('#refs').innerHTML = thumbsFor('reference') || '<span style="color:var(--muted);font-size:12px">no uploads yet</span>';
+  bindPick('#hero','.th','hero'); bindPick('#character','.th','character'); bindPick('#model','.chip','model');
+  bindRefs();
+}
+function bindRefs(){
+  document.querySelectorAll('#refs .th').forEach(el=>el.onclick=()=>{
+    const id=el.dataset.id, i=sel.references.indexOf(id);
+    if(i>=0){ sel.references.splice(i,1); el.classList.remove('sel'); }
+    else if(sel.references.length<3){ sel.references.push(id); el.classList.add('sel'); }
+  });
+}
+async function uploadFiles(fileList){
+  const files=[...fileList].slice(0,3);
+  if(!files.length) return;
+  $('#uplabel').textContent='uploading…';
+  const payload=await Promise.all(files.map(f=>new Promise(res=>{
+    const r=new FileReader(); r.onload=()=>res({name:f.name,dataUrl:r.result}); r.readAsDataURL(f);
+  })));
+  await j('/api/upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({files:payload})});
+  await loadLibrary(); renderCast(); $('#uplabel').firstChild.textContent='+ upload images (max 3)';
+}
+async function rescan(){ const r=await j('/api/rescan',{method:'POST'}); await loadLibrary(); renderCast(); setStatus('rescanned · '+r.assets+' assets','done'); }
+function bindPick(container,childSel,key){
+  document.querySelectorAll(container+' '+childSel).forEach(el=>el.onclick=()=>{
+    const on = el.classList.contains('sel');
+    document.querySelectorAll(container+' '+childSel).forEach(x=>x.classList.remove('sel'));
+    if(!on){ el.classList.add('sel'); sel[key]=el.dataset.id; } else sel[key]=null;
+    updateCli();
+  });
+}
+function updateCli(){
+  if(!sel.recipe){ return; }
+  const cast=[sel.hero&&'hero='+sel.hero, sel.character&&'character='+sel.character, sel.model&&'model='+sel.model].filter(Boolean).join(' ');
+  $('#cli').textContent = `clemtock run --prompt "<${sel.recipe} brief>" --duration ${$('#duration').value} --out out/${$('#name').value||'my-ad'}.mp4`
+    + (cast?`\n# cast: ${cast}`:'');
+}
+$('#name').oninput=updateCli; $('#duration').oninput=updateCli;
+
+async function build(){
+  if(!sel.recipe){ alert('Pick a format first'); return; }
+  $('#build').disabled=true; setStatus('submitting…','run');
+  const r = await j('/api/build',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({recipe:sel.recipe, prompt:$('#prompt').value, hero:sel.hero, character:sel.character,
+      model:sel.model, references:sel.references, duration:Number($('#duration').value), name:$('#name').value||'my-ad'})});
+  if(r.error){ setStatus('error: '+r.error,'fail'); $('#build').disabled=false; return; }
+  poll(r.id);
+}
+async function runRaw(cmd,args){
+  $('#advrun').disabled=true; setStatus('submitting '+cmd+'…','run');
+  const r=await j('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({command:cmd,args:args})});
+  $('#advrun').disabled=false;
+  if(r.error){ setStatus('error: '+r.error,'fail'); return; } poll(r.id);
+}
+function setStatus(t,cls){ $('#status').innerHTML = `<b class="${cls||''}">${t}</b>`; }
+function poll(id){
+  clearInterval(pollTimer);
+  pollTimer=setInterval(async()=>{
+    const v=await j('/api/jobs/'+id);
+    $('#log').textContent=v.log||''; $('#log').scrollTop=$('#log').scrollHeight;
+    setStatus(`${id} · ${v.status}`, v.status);
+    if(v.status!=='running'){
+      clearInterval(pollTimer); $('#build').disabled=false;
+      if(v.out){ const p=$('#player'); p.src='/'+v.out+'?t='+Date.now(); p.style.display='block'; refreshOutputs(); }
+    }
+  },1500);
+}
+let pubTarget=null;
+async function refreshOutputs(){
+  const o=await j('/api/outputs');
+  $('#outs').innerHTML=o.outputs.map(x=>`<div class="out" data-url="${x.url}">▸ ${x.name}<span class="sz">${(x.size/1048576).toFixed(1)} MB</span><span class="pubpick" data-url="${x.url}" data-name="${x.name}" style="margin-left:8px;color:var(--orange);cursor:pointer">⤴</span></div>`).join('')||'<div style="color:var(--muted);font-size:13px">none yet</div>';
+  document.querySelectorAll('.out').forEach(el=>el.onclick=(e)=>{ if(e.target.classList.contains('pubpick'))return; const p=$('#player'); p.src='/'+el.dataset.url+'?t='+Date.now(); p.style.display='block'; p.scrollIntoView({behavior:'smooth'}); });
+  document.querySelectorAll('.pubpick').forEach(el=>el.onclick=(e)=>{ e.stopPropagation(); pubTarget=el.dataset.url; $('#pub').style.opacity='1'; $('#pubsel').innerHTML='publishing <b class="done">'+el.dataset.name+'</b>'; });
+}
+let pubPlatforms=new Set();
+function bindPublish(){
+  document.querySelectorAll('#pubplats .chip').forEach(el=>el.onclick=()=>{
+    const p=el.dataset.plat;
+    if(pubPlatforms.has(p)){ pubPlatforms.delete(p); el.classList.remove('sel'); }
+    else { pubPlatforms.add(p); el.classList.add('sel'); }
+    syncMusicState();
+  });
+  $('#pubmusic').onchange=syncMusicState;
+}
+function syncMusicState(){
+  const tt=pubPlatforms.has('tiktok'), sel=$('#pubmusic'), note=$('#pubmusicnote');
+  if(tt){
+    sel.value=''; sel.disabled=true;
+    note.innerHTML='TikTok posts the <b>raw</b> video — add your sound in the TikTok app. '+
+      (pubPlatforms.size>1?'Publish TikTok separately to use a music bed elsewhere.':'');
+  } else {
+    sel.disabled=false;
+    note.textContent = sel.value ? 'Bed will be looped/trimmed to length and baked in.' : 'No bed — posts as-is (good for narrated spots).';
+  }
+}
+function pubPlatformList(){ return Array.from(pubPlatforms).join(','); }
+function pubArgs(execute){
+  if(!pubTarget){ alert('Pick a rendered ad (⤴) first'); return null; }
+  if(pubPlatforms.size===0){ alert('Pick at least one platform'); return null; }
+  const music=$('#pubmusic').value;
+  if(music && pubPlatforms.has('tiktok')){
+    alert('TikTok can’t carry a baked-in music bed. Uncheck TikTok (publish it separately) or clear the music bed.'); return null; }
+  const a=['--video', pubTarget, '--caption', $('#pubcap').value, '--to', pubPlatformList()];
+  if(music) a.push('--music', music);
+  if(execute) a.push('--execute'); return a;
+}
+$('#pubdry').onclick=()=>{ const a=pubArgs(false); if(a) runRaw('publish', a); };
+$('#publive').onclick=()=>{ const a=pubArgs(true); if(a && confirm('Publish '+pubTarget+' LIVE to: '+pubPlatformList()+' ?\nThis posts publicly and cannot be undone.')) runRaw('publish', a); };
+$('#build').onclick=build;
+$('#advrun').onclick=()=>runRaw($('#advcmd').value, ($('#advargs').value.match(/(?:[^\s"]+|"[^"]*")+/g)||[]).map(s=>s.replace(/^"|"$/g,'')));
+$('#patchrun').onclick=()=>{
+  const scene=$('#pscene').value.trim();
+  if(!scene){ alert('Enter the scene id to tweak (e.g. beat-1)'); return; }
+  const a=['--scene',scene];
+  if($('#ptpl').value) a.push('--template',$('#ptpl').value);
+  if($('#pfit').value) a.push('--fit',$('#pfit').value);
+  if($('#phead').value) a.push('--copy','headline='+$('#phead').value);
+  if($('#passet').value) a.push('--set-asset',$('#passet').value);
+  if(a.length===2){ alert('Nothing to change — set a template, fit, headline, or media'); return; }
+  if($('#precompose').checked) a.push('--recompose','--out','out/'+(($('#name').value||'tweak').replace(/[^a-z0-9-_]/gi,'_'))+'.mp4');
+  runRaw('patch', a);
+};
+$('#upload').onchange=e=>uploadFiles(e.target.files);
+$('#rescan').onclick=rescan;
+boot();
+</script>
+</body>
+</html>

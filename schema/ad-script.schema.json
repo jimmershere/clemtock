@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clemtock/ad-script.schema.json",
+  "title": "clemtock ad-script",
+  "description": "Data-driven description of a vertical social-media ad. Played by web/clemtock-renderer.dc.html and produced by `clemtock script`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "canvas", "duration", "scenes"],
+  "properties": {
+    "version": { "const": 1 },
+    "brand": {
+      "type": "object",
+      "description": "Optional brand context the renderer/script-brain can use.",
+      "additionalProperties": true,
+      "properties": {
+        "name": { "type": "string" },
+        "tagline": { "type": "string" },
+        "cta": { "type": "string" }
+      }
+    },
+    "canvas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer", "default": 1080 },
+        "height": { "type": "integer", "default": 1920 }
+      }
+    },
+    "fps": { "type": "integer", "default": 30 },
+    "duration": { "type": "number", "description": "Total length in seconds.", "exclusiveMinimum": 0 },
+    "palette": {
+      "type": "object",
+      "description": "Named colors referenced by templates (hex strings).",
+      "additionalProperties": { "type": "string" }
+    },
+    "fonts": {
+      "type": "object",
+      "description": "Named font-family stacks referenced by templates.",
+      "additionalProperties": { "type": "string" }
+    },
+    "audio": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bed": { "type": "string", "description": "Asset id for background music." },
+        "vo": { "type": "string", "description": "Asset id for a voice-over track." }
+      }
+    },
+    "assets": {
+      "type": "object",
+      "description": "Asset id -> descriptor. `source:upload` come from uploads/; `source:gen` are produced by a provider during `clemtock assets`.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "source"],
+        "properties": {
+          "kind": { "enum": ["image", "video", "avatar", "audio"] },
+          "source": { "enum": ["upload", "gen"] },
+          "src": { "type": "string", "description": "Resolved path/URL once the asset exists." },
+          "provider": {
+            "type": "string",
+            "description": "For source:gen — which provider produces it.",
+            "enum": ["gpt-image-1", "flux-schnell", "kie", "heygen"]
+          },
+          "prompt": { "type": "string", "description": "Generation prompt for source:gen." },
+          "duration": { "type": "number", "description": "Seconds, for video/avatar gen." },
+          "aspect": { "type": "string", "default": "9:16" }
+        }
+      }
+    },
+    "scenes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "start", "end", "template"],
+        "properties": {
+          "id": { "type": "string" },
+          "start": { "type": "number", "minimum": 0 },
+          "end": { "type": "number", "exclusiveMinimum": 0 },
+          "template": {
+            "type": "string",
+            "description": "Name resolved against the renderer's template registry.",
+            "examples": ["title", "photo", "video", "terminal", "split", "cta"]
+          },
+          "fadeIn": { "type": "number", "default": 0.12 },
+          "fadeOut": { "type": "number", "default": 0.12 },
+          "assets": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Asset ids this scene displays, in order."
+          },
+          "copy": {
+            "type": "object",
+            "description": "Text slots; which keys matter depends on the template.",
+            "additionalProperties": { "type": "string" },
+            "properties": {
+              "kicker": { "type": "string" },
+              "headline": { "type": "string" },
+              "sub": { "type": "string" },
+              "cta": { "type": "string" }
+            }
+          },
+          "motion": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "type": { "enum": ["none", "stamp", "kenburns", "slide", "rise"] },
+              "from": { "type": "number" },
+              "to": { "type": "number" }
+            }
+          },
+          "params": {
+            "type": "object",
+            "description": "Free-form template-specific knobs.",
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  }
+}

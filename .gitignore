@@ -1,0 +1,19 @@
+# secrets never live here, but guard against accidents
+*.env
+.env
+.env.*
+!*.env.example
+
+# encrypted vault (ciphertext, but keep it out of git anyway) + passphrase
+.vault/
+
+# input + output media
+uploads/
+out/
+web/ad-script.local.json
+
+# python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/

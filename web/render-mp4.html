@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>clemtock — Render MP4</title>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.1/build/mp4-muxer.min.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Saira Condensed',sans-serif;background:#06090e;color:#E7EBEF;min-height:100vh;
+    background-image:linear-gradient(rgba(34,50,76,.35) 1px,transparent 1px),linear-gradient(90deg,rgba(34,50,76,.35) 1px,transparent 1px);
+    background-size:48px 48px;display:flex;align-items:flex-start;justify-content:center;padding:40px 24px 80px}
+  .wrap{width:100%;max-width:980px;display:grid;grid-template-columns:300px 1fr;gap:34px}
+  .frame{width:300px;height:533px;border-radius:18px;overflow:hidden;border:2px solid #2E4150;background:#0B1018;box-shadow:0 30px 70px -30px rgba(0,0,0,.8)}
+  .frame iframe{width:1080px;height:1920px;border:0;transform:scale(.27778);transform-origin:top left;display:block}
+  .kick{font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:4px;color:#A6E84A;text-transform:uppercase}
+  h1{font-weight:800;font-size:54px;line-height:.95;letter-spacing:-1px;margin:10px 0 6px}
+  h1 span{color:#EF6A28}
+  p.sub{color:#93A6BC;font-size:18px;max-width:46ch;line-height:1.5}
+  .specs{display:flex;gap:10px;flex-wrap:wrap;margin:22px 0 26px}
+  .chip{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:1px;color:#ECE4D2;border:1px solid #2E4150;background:rgba(28,44,73,.4);border-radius:999px;padding:7px 13px}
+  button.rec{font-weight:800;font-size:24px;color:#10210a;background:#A6E84A;border:0;border-radius:12px;padding:18px 30px;cursor:pointer;display:inline-flex;align-items:center;gap:12px;box-shadow:0 0 40px rgba(166,232,74,.35)}
+  button.rec:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+  button.rec .dot{width:14px;height:14px;border-radius:50%;background:#10210a}
+  .bar{margin-top:26px;height:14px;border-radius:8px;background:#16212F;border:1px solid #22324C;overflow:hidden;display:none}
+  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7FBE2E,#A6E84A);box-shadow:0 0 14px rgba(166,232,74,.6);transition:width .1s linear}
+  .status{margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:14px;color:#93A6BC;min-height:20px}
+  .status b{color:#A6E84A}
+  .note{margin-top:28px;font-size:14.5px;color:#6E8094;line-height:1.55;border-top:1px solid #22324C;padding-top:18px}
+  .note code{font-family:'JetBrains Mono',monospace;color:#ECE4D2;background:#121C2A;padding:2px 6px;border-radius:5px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="preview"><div class="frame"><iframe id="stageFrame" src="clemtock-renderer.dc.html" title="clemtock ad"></iframe></div></div>
+    <div class="panel">
+      <div class="kick">clemtock · Render</div>
+      <h1>Export the ad<br>as <span>MP4</span></h1>
+      <p class="sub">Renders every frame of the current <code>ad-script.json</code> offline at full resolution and encodes a clean vertical video. Keep this tab focused while it works.</p>
+      <div class="specs">
+        <span class="chip">1080 × 1920</span><span class="chip">9:16 vertical</span>
+        <span class="chip">30 fps</span><span class="chip" id="durChip">…s</span>
+        <span class="chip" id="codecChip">H.264 MP4</span>
+      </div>
+      <button class="rec" id="recBtn"><span class="dot"></span> Render &amp; download</button>
+      <div class="bar" id="bar"><i id="barFill"></i></div>
+      <div class="status" id="status">Ready.</div>
+      <div class="note">Duration comes from the loaded ad-script. If your browser lacks MP4 encoding it falls back to <code>.webm</code>.</div>
+    </div>
+  </div>
+<script>
+const FPS = 30, W = 1080, H = 1920;
+let DUR = 15, N = FPS*DUR;
+const btn=document.getElementById('recBtn'), bar=document.getElementById('bar'), barFill=document.getElementById('barFill');
+const statusEl=document.getElementById('status'), codecChip=document.getElementById('codecChip'), durChip=document.getElementById('durChip');
+const iframe=document.getElementById('stageFrame');
+const raf=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+const wait=(ms)=>new Promise(r=>setTimeout(r,ms));
+const setStatus=(html)=>statusEl.innerHTML=html;
+const setProg=(p)=>{bar.style.display='block';barFill.style.width=(p*100).toFixed(1)+'%';};
+const getDoc=()=>iframe.contentDocument||iframe.contentWindow.document;
+const getStage=()=>getDoc().querySelector('[data-screen-label]');
+const getRange=()=>getDoc().querySelector('input[type=range]');
+function seek(t){const r=getRange();r.value=String(t);r.dispatchEvent(new Event('input',{bubbles:true}));}
+
+async function waitForStage(){
+  setStatus('Loading ad…');
+  for(let i=0;i<300;i++){
+    try{ const d=getDoc();
+      if(d && getStage() && getRange() && parseFloat(getRange().max)>0){
+        if(d.fonts&&d.fonts.ready) await d.fonts.ready;
+        DUR=parseFloat(getRange().max)||15; N=Math.round(FPS*DUR);
+        durChip.textContent=DUR.toFixed(1)+'s';
+        await wait(500); return true;
+      }
+    }catch(e){}
+    await wait(100);
+  }
+  throw new Error('Ad did not load in time.');
+}
+const CAP_OPTS={width:W,height:H,pixelRatio:1,cacheBust:false,backgroundColor:'#0B1018',style:{transform:'none',left:'0px',top:'0px',margin:'0'}};
+function download(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);}
+
+async function renderWebCodecs(){
+  const codecs=['avc1.640034','avc1.4d0034','avc1.420034']; let chosen=null;
+  for(const c of codecs){ try{ const s=await VideoEncoder.isConfigSupported({codec:c,width:W,height:H,bitrate:9_000_000,framerate:FPS}); if(s&&s.supported){chosen=c;break;} }catch(e){} }
+  if(!chosen) throw new Error('No supported H.264 config');
+  const {Muxer,ArrayBufferTarget}=window.Mp4Muxer;
+  const muxer=new Muxer({target:new ArrayBufferTarget(),fastStart:'in-memory',video:{codec:'avc',width:W,height:H,frameRate:FPS}});
+  const encoder=new VideoEncoder({output:(chunk,meta)=>muxer.addVideoChunk(chunk,meta),error:(e)=>console.error(e)});
+  encoder.configure({codec:chosen,width:W,height:H,bitrate:9_000_000,framerate:FPS,latencyMode:'quality'});
+  const stage=getStage();
+  for(let i=0;i<N;i++){
+    const t=i/FPS; seek(t); await raf();
+    const canvas=await htmlToImage.toCanvas(stage,CAP_OPTS);
+    const frame=new VideoFrame(canvas,{timestamp:Math.round(i*1e6/FPS),duration:Math.round(1e6/FPS)});
+    encoder.encode(frame,{keyFrame:i%30===0}); frame.close();
+    while(encoder.encodeQueueSize>8){await wait(8);}
+    setProg(i/N); if(i%5===0) setStatus('Encoding frame <b>'+(i+1)+'</b> / '+N+'  ('+Math.round(i/N*100)+'%)');
+  }
+  setStatus('Finalizing MP4…'); await encoder.flush(); muxer.finalize();
+  return new Blob([muxer.target.buffer],{type:'video/mp4'});
+}
+async function renderMediaRecorder(){
+  const canvas=document.createElement('canvas'); canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d'); ctx.fillStyle='#0B1018'; ctx.fillRect(0,0,W,H);
+  const types=['video/mp4;codecs=avc1.640034','video/mp4','video/webm;codecs=vp9','video/webm'];
+  let mime=types.find(t=>MediaRecorder.isTypeSupported(t))||'video/webm';
+  codecChip.textContent=mime.includes('mp4')?'H.264 MP4':'WebM (VP9)';
+  const stream=canvas.captureStream(FPS);
+  const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:9_000_000});
+  const chunks=[]; rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+  const stopped=new Promise(r=>rec.onstop=r);
+  const stage=getStage(); rec.start(); const start=performance.now(); let last=-1;
+  while(true){
+    const t=Math.min(DUR,(performance.now()-start)/1000);
+    if(Math.abs(t-last)>0.0001){seek(t);last=t;} await raf();
+    try{const c=await htmlToImage.toCanvas(stage,CAP_OPTS); ctx.drawImage(c,0,0,W,H);}catch(e){}
+    setProg(t/DUR); setStatus('Recording (real-time) <b>'+t.toFixed(1)+'</b>s / '+DUR+'s');
+    if(t>=DUR) break;
+  }
+  rec.stop(); await stopped;
+  const ext=mime.includes('mp4')?'mp4':'webm';
+  return {blob:new Blob(chunks,{type:mime.split(';')[0]}),ext};
+}
+async function run(){
+  btn.disabled=true;
+  try{
+    await waitForStage();
+    let blob,ext='mp4';
+    const canWebCodecs=('VideoEncoder' in window)&&window.Mp4Muxer&&(typeof VideoFrame!=='undefined');
+    if(canWebCodecs){
+      try{ blob=await renderWebCodecs(); codecChip.textContent='H.264 MP4'; }
+      catch(err){ console.warn('WebCodecs failed:',err); setStatus('Switching to real-time recorder…'); const r=await renderMediaRecorder(); blob=r.blob; ext=r.ext; }
+    }else{ const r=await renderMediaRecorder(); blob=r.blob; ext=r.ext; }
+    try{const r=getRange();r.value='0';r.dispatchEvent(new Event('input',{bubbles:true}));}catch(e){}
+    setProg(1); const name='clemtock-ad.'+ext; download(blob,name);
+    setStatus('Done — downloaded <b>'+name+'</b> ('+(blob.size/1048576).toFixed(1)+' MB).');
+  }catch(err){ console.error(err); setStatus('<b style="color:#FF5A4D">Error:</b> '+(err.message||err)); }
+  finally{ btn.disabled=false; }
+}
+btn.addEventListener('click',run);
+</script>
+</body>
+</html>
