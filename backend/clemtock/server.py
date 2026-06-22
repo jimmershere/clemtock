@@ -43,7 +43,7 @@ OUT = REPO / "out"
 JOBLOG = OUT / "jobs"
 
 ALLOWED = {"script", "assets", "video", "avatar", "compose", "run", "export", "probe",
-           "accounts", "publish", "patch", "music"}
+           "accounts", "publish", "patch", "music", "caption"}
 
 _jobs: dict[str, dict] = {}
 _lock = threading.Lock()
@@ -135,6 +135,10 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/music":
             from .pipeline import music as music_mod
             return self._send_json({"tracks": music_mod.list_tracks(REPO)})
+        if p == "/api/captions":
+            from . import captions
+            return self._send_json({"platforms": list(captions.PLATFORM_SPECS.keys()),
+                                    "presets": captions.load_presets(REPO)})
         if p == "/api/outputs":
             items = []
             if OUT.exists():
@@ -163,6 +167,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send_json(lib_mod.rebuild())
         if p == "/api/upload":
             return self._upload(body)
+        if p == "/api/caption":
+            return self._caption(body)
         if p == "/api/run":
             command = body.get("command")
             if command not in ALLOWED:
@@ -179,6 +185,19 @@ class Handler(BaseHTTPRequestHandler):
             lib_mod.rebuild()  # scan before planning + executing
             return self._build(body)
         self.send_error(404)
+
+    def _caption(self, body: dict):
+        """Draft a platform-tuned caption synchronously (quick OpenRouter call)."""
+        from . import captions
+        from .config import Config
+        cfg = Config.from_env()  # vault keys were applied to env at startup
+        try:
+            res = captions.draft(REPO, body.get("brief", ""), body.get("platform", "tiktok"),
+                                 cfg.openrouter_key, preset=body.get("preset"),
+                                 extra_tags=body.get("tags"), model=cfg.script_model)
+        except Exception as e:
+            return self._send_json({"error": str(e)}, 400)
+        return self._send_json(res)
 
     def _upload(self, body: dict):
         """Accept up to 3 reference images (base64 data URLs) into assets/uploads/."""
