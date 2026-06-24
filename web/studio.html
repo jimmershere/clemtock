@@ -144,8 +144,14 @@ The job runs on floor2; logs stream here.</div>
       <label class="fl" style="margin-top:12px">Music bed <span style="color:var(--muted);text-transform:none">— optional; baked into non-TikTok posts</span></label>
       <select id="pubmusic"><option value="">— no music —</option></select>
       <div id="pubmusicnote" style="font-size:11.5px;color:var(--muted);margin-top:5px"></div>
-      <label class="fl" style="margin-top:12px">Caption</label>
-      <textarea id="pubcap" style="min-height:54px" placeholder="Caption for the post…"></textarea>
+      <label class="fl" style="margin-top:12px">Caption <span style="color:var(--muted);text-transform:none">— write your own, or draft one with AI</span></label>
+      <input id="capbrief" placeholder="What's the ad about? (brief for the AI; defaults to your prompt above)">
+      <div class="adv" style="margin-top:8px">
+        <select id="capplatform" title="Caption voice / length"></select>
+        <select id="cappreset" title="Hashtag preset"><option value="">— no hashtags —</option></select>
+        <button id="capgen" title="Draft a platform-tuned caption">✦ generate caption</button>
+      </div>
+      <textarea id="pubcap" style="min-height:64px;margin-top:8px" placeholder="Caption for the post…"></textarea>
       <div style="display:flex;gap:10px;margin-top:10px">
         <button id="pubdry" class="adv" style="flex:1">▷ dry-run</button>
         <button id="publive" style="flex:1;background:var(--orange);border:0;color:#1a0c03;font-weight:800;border-radius:8px;padding:9px;cursor:pointer">⤴ publish live</button>
@@ -163,7 +169,17 @@ async function j(u,o){ const r=await fetch(u,o); return r.json(); }
 async function boot(){
   try{ const h=await j('/api/health'); $('#health').textContent='● online · '+h.jobs+' jobs'; }catch(e){ $('#health').textContent='● offline'; }
   await loadLibrary(); RECIPES = await j('/api/recipes');
-  renderRecipes(); renderCast(); refreshOutputs(); loadMusic(); bindPublish();
+  renderRecipes(); renderCast(); refreshOutputs(); loadMusic(); loadCaptions(); bindPublish();
+}
+async function loadCaptions(){
+  try{
+    const d = await j('/api/captions');
+    $('#capplatform').innerHTML = (d.platforms||[]).map(p=>`<option value="${p}">${p}</option>`).join('');
+    const presets = Object.keys(d.presets||{});
+    $('#cappreset').innerHTML = '<option value="">— no hashtags —</option>' +
+      presets.map(k=>`<option value="${k}">${k}</option>`).join('');
+    if((d.presets||{})['local81-oss']) $('#cappreset').value='local81-oss';
+  }catch(e){}
 }
 async function loadMusic(){
   try{
@@ -277,9 +293,23 @@ function bindPublish(){
     if(pubPlatforms.has(p)){ pubPlatforms.delete(p); el.classList.remove('sel'); }
     else { pubPlatforms.add(p); el.classList.add('sel'); }
     syncMusicState();
+    // align the caption voice to the first selected platform (if it's a known caption platform)
+    const first=Array.from(pubPlatforms)[0];
+    if(first && $('#capplatform').querySelector('option[value="'+first+'"]')) $('#capplatform').value=first;
   });
   $('#pubmusic').onchange=syncMusicState;
 }
+$('#capgen') && ($('#capgen').onclick=async()=>{
+  const brief=($('#capbrief').value || $('#prompt').value || '').trim();
+  if(!brief){ alert('Add a short brief (or fill the prompt above) so the AI knows what to write'); return; }
+  const btn=$('#capgen'), old=btn.textContent; btn.disabled=true; btn.textContent='…drafting';
+  try{
+    const r=await j('/api/caption',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({brief, platform:$('#capplatform').value, preset:$('#cappreset').value})});
+    if(r.error) alert('caption: '+r.error); else $('#pubcap').value=r.text;
+  }catch(e){ alert('caption failed: '+e); }
+  btn.disabled=false; btn.textContent=old;
+});
 function syncMusicState(){
   const tt=pubPlatforms.has('tiktok'), sel=$('#pubmusic'), note=$('#pubmusicnote');
   if(tt){

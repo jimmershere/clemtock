@@ -225,6 +225,27 @@ def cmd_music(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_caption(args: argparse.Namespace) -> int:
+    """Draft a platform-tuned social caption + curated hashtags (OpenRouter)."""
+    from . import captions
+    cfg = Config.from_env()
+    brief = args.brief or ""
+    if not brief and args.script and Path(args.script).exists():
+        try:  # fall back to a brief stored on the ad-script, if any
+            doc = json.loads(Path(args.script).read_text())
+            brief = doc.get("brief") or doc.get("prompt") or ""
+        except Exception:
+            pass
+    try:
+        res = captions.draft(_REPO, brief, args.platform, cfg.openrouter_key,
+                             preset=args.preset, extra_tags=args.tags, model=cfg.script_model)
+    except ProviderUnavailable as e:
+        print(f"clemtock caption: {e}", file=sys.stderr)
+        return 2
+    print(res["text"])  # full caption (body + hashtags) to stdout for piping
+    return 0
+
+
 # platform aliases -> the names Post Bridge reports for connected accounts
 _PLATFORM_ALIAS = {"x": "twitter", "twitter/x": "twitter"}
 
@@ -456,6 +477,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     acc = sub.add_parser("accounts", help="list connected social accounts")
     acc.set_defaults(func=cmd_accounts)
+
+    cap = sub.add_parser("caption", help="draft a platform-tuned social caption (OpenRouter)")
+    cap.add_argument("--brief", default="", help="what the ad/product is about")
+    cap.add_argument("--platform", default="tiktok",
+                     help="tiktok/instagram/youtube/x/lemon8/threads/facebook")
+    cap.add_argument("--preset", default=None, help="hashtag preset (see web/hashtag-presets.json)")
+    cap.add_argument("--tags", default=None, help="extra hashtags (space/comma separated)")
+    cap.add_argument("--script", default=str(_REPO / "web" / "ad-script.json"),
+                     help="fallback brief source if --brief is omitted")
+    cap.set_defaults(func=cmd_caption)
 
     mus = sub.add_parser("music", help="mux an optional royalty-free music bed into an ad")
     mus.add_argument("--video", required=True)

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  /* exact ad canvas */
+  html,body{width:1080px;height:1920px;overflow:hidden;background:#0B1018}
+  #card{position:relative;width:1080px;height:1920px;background:#0B1018;
+    font-family:'Saira Condensed',sans-serif}
+  /* brand grid + vignette (matches the ad's bg) */
+  .grid{position:absolute;inset:0;background-image:
+    linear-gradient(rgba(34,50,76,.45) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(34,50,76,.45) 1px,transparent 1px);
+    background-size:64px 64px}
+  .vig{position:absolute;inset:0;background:radial-gradient(120% 75% at 50% 42%,transparent 38%,rgba(0,0,0,.72))}
+  /* a banner is centered on its target line; translateY(-50%) puts the BAR CENTER on the % */
+  .banner{position:absolute;left:50%;transform:translate(-50%,-50%);
+    width:880px;text-align:center}
+  /* 40% down: the action banner */
+  .b1{top:40%}
+  .b1 .bar{display:inline-block;background:#A6E84A;color:#0B1018;
+    font-weight:800;font-size:104px;line-height:1;letter-spacing:-1px;
+    padding:34px 54px;border-radius:18px;
+    box-shadow:0 0 60px rgba(166,232,74,.42)}
+  /* 60% down: the where-to-get-it path */
+  .b2{top:60%}
+  .b2 .kick{font-family:'JetBrains Mono',monospace;font-size:30px;letter-spacing:5px;
+    color:#A6E84A;text-transform:uppercase;margin-bottom:18px}
+  .b2 .bar{display:inline-block;white-space:nowrap;background:rgba(8,13,18,.94);border:3px solid #EF6A28;
+    border-radius:14px;padding:24px 34px;
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:34px;color:#ECE4D2;
+    box-shadow:0 0 40px rgba(239,106,40,.30)}
+  .b2 .bar b{color:#A6E84A}
+</style>
+</head>
+<body>
+<div id="card">
+  <div class="grid"></div>
+  <div class="vig"></div>
+  <div class="banner b1"><span class="bar">Try Out the Demo</span></div>
+  <div class="banner b2">
+    <div class="kick">Get the software</div>
+    <span class="bar">https://github.com/jimmershere/<b>local81</b></span>
+  </div>
+</div>
+</body>
+</html>

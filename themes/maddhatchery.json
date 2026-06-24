@@ -1,0 +1,26 @@
+{
+  "name": "maddhatchery",
+  "label": "Madd Hatchery",
+  "ref": "https://maddhatchery.com — Mad-Hatter farmhouse: teal + deep purple + cream + warm amber, bold cartoon sticker art, Trish the pink/red-haired mascot.",
+  "location": "Hubert, NC (Eastern NC / Crystal Coast) — the farm's hometown; lean on the local angle for community marketing.",
+  "palette": {
+    "ink": "#15323a",
+    "cream": "#f6eedb",
+    "text": "#f3ece0",
+    "muted": "#cbe0db",
+    "lime": "#52e0d6",
+    "orange": "#f0a83a",
+    "line": "#234a52",
+    "line2": "#2c5a62"
+  },
+  "fonts": { "headline": "Saira Condensed", "mono": "JetBrains Mono" },
+  "style_prompt": "Bold vintage cartoon sticker style, thick clean black outlines, bright flat colors with subtle halftone shading. Madd Hatchery palette: teal, deep purple, cream, and warm amber. Wholesome hippy-country farmhouse mood. No text.",
+  "backdrop_prompt": "Soft blurred vertical background pattern for a farm brand: deep teal and plum night tones with a faint cream gingham check, scattered jam jars, peacock-feather swirls, eggs and tiny chicks, warm amber glow, vignette. Muted, low-contrast, no text — meant to sit behind headline type. Madd Hatchery look.",
+  "mascots": {
+    "trish": "Trish, the Madd Hatchery farm-girl mascot: curly dark-red hair, round glasses, call-center headset, tie-dye shirt; cheerful and sassy."
+  },
+  "audiences": {
+    "farm-girls": "Country farm-girl audience in/around Hubert, NC: warm, local, hands-in-the-dirt, market-day community pride. Voice: friendly, witty, down-home, a little sassy. Emphasize handmade jam, farm-fresh eggs/chicks, local Hubert NC pickup and the market crew."
+  },
+  "input_visual_ref": ["assets/mh-logo.png", "https://maddhatchery.com"]
+}

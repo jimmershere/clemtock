@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "canvas": { "width": 1080, "height": 1920, "fps": 30 },
+  "duration": 12,
+  "palette": {
+    "ink": "#16323a",
+    "cream": "#f6eedb",
+    "text": "#f1f6f4",
+    "muted": "#bcd3cf",
+    "lime": "#37c9c2",
+    "orange": "#e0922f",
+    "line": "#234a52",
+    "line2": "#2c5a62"
+  },
+  "assets": {
+    "jar":   { "kind": "image", "source": "upload", "src": "assets/mh-jar.png" },
+    "tee":   { "kind": "image", "source": "upload", "src": "assets/mh-tee.png" },
+    "trish": { "kind": "image", "source": "upload", "src": "assets/mh-trish.png" }
+  },
+  "scenes": [
+    {
+      "id": "open",
+      "start": 0, "end": 2.2,
+      "template": "title",
+      "params": { "tint": "rgba(122,63,157,0.22)" },
+      "copy": {
+        "kicker": "TRISH'S URBAN FARM",
+        "headline": "MADD\nHATCHERY",
+        "sub": "small-batch jams · farm-fresh · merch"
+      }
+    },
+    {
+      "id": "jam",
+      "start": 2.2, "end": 4.6,
+      "template": "photo",
+      "assets": ["jar"],
+      "motion": { "from": 1.0, "to": 1.16 },
+      "copy": { "headline": "SMALL-BATCH\nJAMS" }
+    },
+    {
+      "id": "merch",
+      "start": 4.6, "end": 7.0,
+      "template": "photo",
+      "assets": ["tee"],
+      "motion": { "from": 1.15, "to": 1.0 },
+      "copy": { "headline": "WEAR THE\nFARM" }
+    },
+    {
+      "id": "followers",
+      "start": 7.0, "end": 9.4,
+      "template": "photo",
+      "assets": ["trish"],
+      "motion": { "from": 1.05, "to": 1.18 },
+      "copy": { "headline": "OVER 1,000\nFOLLOWERS" }
+    },
+    {
+      "id": "cta",
+      "start": 9.4, "end": 12,
+      "template": "cta",
+      "copy": {
+        "headline": "SHOP NOW",
+        "sub": "JAMS · MERCH · EGGS · CHICKS",
+        "cta": "maddhatchery.com"
+      }
+    }
+  ]
+}
