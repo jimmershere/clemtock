@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./support.js"></script>
 <script src="./templates.js"></script>
+<script src="./themes.js"></script>
 </head>
 <body>
 <x-dc>
@@ -93,9 +94,16 @@ class Component extends DCLogic {
   back=(x)=>{const c=2.0,c3=c+1;return 1+c3*Math.pow(x-1,3)+c*Math.pow(x-1,2);};
   stamp=(p)=>this.lerp(1.18,1,this.eo(p));
 
-  palette(){ return Object.assign({}, this.DEFAULT_C, (this.state.doc && this.state.doc.palette) || {}); }
+  theme(){ const doc=this.state.doc||{}; const reg=(typeof window!=='undefined'&&window.CLEMTOCK_THEMES)||{};
+    return (doc.theme && reg[doc.theme]) || null; }
+
+  palette(){ const th=this.theme();
+    return Object.assign({}, this.DEFAULT_C, (th&&th.palette)||{}, (this.state.doc && this.state.doc.palette) || {}); }
 
   bg=(tint)=>{ const h=React.createElement, C=this.palette();
+    const th=this.theme();
+    if (th && typeof th.backdrop==='function')
+      return th.backdrop(h, C, { assets:(this.state.doc&&this.state.doc.assets)||{}, tint, alpha:this._alpha });
     return [
       // in alpha/compositing mode the solid ink fill is provided by the ffmpeg base layer
       this._alpha?null:h('div',{key:'b',style:{position:'absolute',inset:0,background:C.ink}}),

@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "theme": "maddhatchery",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "duration": 13,
+  "assets": {
+    "backdrop": {
+      "kind": "image",
+      "source": "gen",
+      "provider": "gpt-image-1",
+      "prompt": "Soft blurred vertical background pattern for a farm brand: deep teal and plum night tones with a faint cream gingham check, scattered jam jars, peacock-feather swirls, eggs and tiny chicks, warm amber glow, vignette. Muted, low-contrast, no text \u2014 meant to sit behind headline type. Madd Hatchery look, bold vintage cartoon sticker style.",
+      "src": "assets/backdrop.png"
+    },
+    "jar": {
+      "kind": "image",
+      "source": "upload",
+      "src": "assets/mh-jar.png"
+    },
+    "chicks": {
+      "kind": "image",
+      "source": "upload",
+      "src": "assets/mh-chicks.png"
+    },
+    "tee": {
+      "kind": "image",
+      "source": "upload",
+      "src": "assets/mh-tee.png"
+    },
+    "trish": {
+      "kind": "image",
+      "source": "upload",
+      "src": "assets/mh-trish.png"
+    }
+  },
+  "scenes": [
+    {
+      "id": "open",
+      "start": 0,
+      "end": 2.4,
+      "template": "title",
+      "copy": {
+        "kicker": "HANDMADE IN HUBERT, NC",
+        "headline": "MADD\nHATCHERY",
+        "sub": "jam \u00b7 eggs \u00b7 chicks \u00b7 merch \u2014 made by hand"
+      }
+    },
+    {
+      "id": "jam",
+      "start": 2.4,
+      "end": 4.6,
+      "template": "photo",
+      "assets": [
+        "jar"
+      ],
+      "motion": {
+        "from": 1.0,
+        "to": 1.16
+      },
+      "copy": {
+        "headline": "SMALL-BATCH\nJAMS"
+      }
+    },
+    {
+      "id": "flock",
+      "start": 4.6,
+      "end": 6.8,
+      "template": "photo",
+      "assets": [
+        "chicks"
+      ],
+      "motion": {
+        "from": 1.14,
+        "to": 1.0
+      },
+      "copy": {
+        "headline": "FARM-FRESH\nEGGS & CHICKS"
+      }
+    },
+    {
+      "id": "merch",
+      "start": 6.8,
+      "end": 9.0,
+      "template": "photo",
+      "assets": [
+        "tee"
+      ],
+      "motion": {
+        "from": 1.0,
+        "to": 1.14
+      },
+      "copy": {
+        "headline": "WEAR THE\nFARM"
+      }
+    },
+    {
+      "id": "followers",
+      "start": 9.0,
+      "end": 11.0,
+      "template": "photo",
+      "assets": [
+        "trish"
+      ],
+      "motion": {
+        "from": 1.06,
+        "to": 1.18
+      },
+      "copy": {
+        "headline": "1,000 STRONG\nTHANK Y'ALL"
+      }
+    },
+    {
+      "id": "cta",
+      "start": 11.0,
+      "end": 13,
+      "template": "cta",
+      "copy": {
+        "headline": "SHOP LOCAL",
+        "sub": "HUBERT, NC \u00b7 maddhatchery.com",
+        "cta": "maddhatchery.com"
+      }
+    }
+  ]
+}
