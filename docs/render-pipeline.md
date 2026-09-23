@@ -139,10 +139,39 @@ Worth knowing now even though it is not being built:
 
 | # | Question |
 |---|---|
-| PR-9 | Which vast.ai image? `VAST_IMAGE` defaults to `vastai/comfy:latest`, which is a **placeholder and unverified**. Confirm against the account's templates before the first real rent. |
+| ~~PR-9~~ | **ANSWERED 2026-09-23.** `vastai/comfy` publishes **no `latest` tag** (Docker Hub 404s), nor does `vastai/base-image` — the placeholder would have rented a box that could never start, and a box that cannot start still bills. Pinned to `vastai/comfy:v0.37.0-cuda-12.9-py312` (9.76 GB); `PROBE_IMAGE` is `vastai/base-image:cuda-12.9.2-auto` (7.65 GB) for lifecycle checks. |
+| PR-13 | **HeyGen auto-reload is ON** — `$75` recharged whenever the wallet drops below `$5`. The budget is not the $98.78 showing; it is uncapped until that is switched off. Turn it off, or decide the ceiling deliberately. |
+| PR-14 | HeyGen has **zero cartoon avatars** in its 1,264-avatar stock library — all photoreal presenters. Cartoon requires the talking-photo upload path (a payload branch `heygen.py` does not have). Is HeyGen worth it for a cartoon product at all? |
 | PR-10 | Where does the mascot mouth-sprite set live — portrender `brands/<slug>/` (and is that OK for a public repo, cf. PR-5) or clemtock `assets/`? |
 | PR-11 | Does b-roll need Wan at all for v1, or do Ken-Burns moves over portrender stills carry the ad? If the latter, the GPU is not needed *at all* yet and vast.ai can stay unrented. |
 | PR-12 | Resale pricing — unanswerable until `cost.json` has real numbers (stage 2). |
+
+## Rented-GPU lifecycle — verified live 2026-09-23
+
+Two paid runs against the real account, total spend **$0.0002**:
+
+| | |
+|---|---|
+| search → rent → wait → verify → destroy | works; contracts 52267396 and 52267539 |
+| provisioning | **~3 min** before the container is up (7.65 GB image pull), all billed |
+| teardown | `destroy()` in a `finally`; account confirmed back to 0 instances, $0.000/hr |
+| observed rate | $0.402–0.472/hr for a 24 GB 4090 |
+
+Two bugs the live runs exposed, both now fixed:
+
+- **`wait_running` returned too early.** vast reports `cur_state` (the contract — "running"
+  the moment the box is yours) and `actual_status` (the container — "loading" while it
+  pulls the image). The first run reported RUNNING at `actual_status: None`; a render job
+  would have talked to a box with nothing on it. Now requires `actual_status == "running"`,
+  and the second run correctly showed `running (container not up yet)` → `loading` →
+  `running`.
+- **Offer ids go stale in minutes.** Offer 49259401 rented fine, then answered
+  `no_such_ask … is not available` on the very next attempt — somebody else took the
+  machine. `rent_first_available()` now falls through the offer list; the second run
+  skipped the dead offer automatically and rented the next one.
+
+That ~3 min of paid provisioning per rent is the whole argument for batching: it is
+~$0.02 of pure overhead every time you rent, regardless of how much work you then do.
 
 ## Status
 

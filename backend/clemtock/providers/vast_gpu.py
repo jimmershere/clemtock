@@ -35,10 +35,13 @@ from .base import ProviderUnavailable
 
 BASE = "https://console.vast.ai"
 
-# A ComfyUI-bearing image is what the render workers actually need. vast publishes
-# templates; this default is a placeholder that MUST be confirmed against the account's
-# template list before the first real rent (see docs — open question PR-9).
-DEFAULT_IMAGE = os.environ.get("VAST_IMAGE", "vastai/comfy:latest")
+# PR-9, answered 2026-09-23: vastai/comfy publishes NO `latest` tag (Docker Hub 404s),
+# so the obvious-looking "vastai/comfy:latest" rents a box that can never start — and a
+# box that cannot start still bills. Pin a tag that exists and check before bumping:
+#   https://hub.docker.com/v2/repositories/vastai/comfy/tags
+DEFAULT_IMAGE = os.environ.get("VAST_IMAGE", "vastai/comfy:v0.37.0-cuda-12.9-py312")
+# Smaller, no ComfyUI — used for lifecycle checks where pulling 9.76 GB is wasted money.
+PROBE_IMAGE = os.environ.get("VAST_PROBE_IMAGE", "vastai/base-image:cuda-12.9.2-auto")
 
 
 @dataclass(frozen=True)
@@ -170,6 +173,30 @@ class VastGPU:
                  f"credit before: ${credit:.2f}")
         return res
 
+    def rent_first_available(self, offers: list, *, live: bool = False,
+                             image: str = "", disk_gb: float = 80,
+                             onstart: str = "", env: dict | None = None) -> tuple:
+        """Try each offer in turn, returning (offer, response) for the first that takes.
+
+        Offers are ephemeral listings, not reservations: between searching and asking,
+        somebody else can take the machine and the id stops existing. Observed live on
+        2026-09-23 — offer 49259401 rented fine once, then answered
+        `no_such_ask ... is not available` minutes later. An unattended render farm that
+        does not fall through to the next offer simply fails at random.
+        """
+        last: Exception | None = None
+        for offer in offers:
+            try:
+                return offer, self.rent(offer, live=live, image=image, disk_gb=disk_gb,
+                                        onstart=onstart, env=env)
+            except VastError as e:
+                if "no_such_ask" in str(e) or "not available" in str(e):
+                    self.log(f"  offer {offer.id} gone, trying next…")
+                    last = e
+                    continue
+                raise
+        raise VastError(f"no offer could be rented ({len(offers)} tried); last: {last}")
+
     def destroy(self, instance_id: int, *, live: bool = False) -> dict:
         """Destroy an instance. This is what stops the meter."""
         if not live:
@@ -184,15 +211,39 @@ class VastGPU:
         return [self.destroy(int(i["id"]), live=live) for i in self.instances()]
 
     # ---------- orchestration ----------
-    def wait_running(self, instance_id: int, *, timeout: int = 900,
+    def wait_running(self, instance_id: int, *, timeout: int = 1200,
                      poll: int = 15) -> dict:
+        """Block until the CONTAINER is up, not merely until the box is assigned.
+
+        vast reports two different things and they are not the same:
+          cur_state      — the contract ("running" as soon as the machine is yours)
+          actual_status  — the container ("loading" while it pulls the image, then
+                           "running" once it is actually up)
+
+        Treating cur_state as ready returns while a 7.65-9.76 GB image is still
+        downloading, and the caller then talks to a box with nothing on it. Observed
+        live on contract 52267396, 2026-09-23: cur_state running, actual_status None.
+        So: require actual_status == "running", and only fall back to cur_state once
+        actual_status has been seen at all (older//odd instances never populate it).
+        """
         deadline = time.monotonic() + timeout
+        seen_actual = False
+        last = None
         while time.monotonic() < deadline:
-            inst = self.instance(instance_id)
-            status = (inst or {}).get("actual_status") or (inst or {}).get("cur_state") or "?"
-            if status == "running":
+            inst = self.instance(instance_id) or {}
+            actual = inst.get("actual_status")
+            cur = inst.get("cur_state")
+            if actual:
+                seen_actual = True
+            if actual == "running":
                 return inst
-            self.log(f"  instance {instance_id}: {status} …")
+            if not actual and seen_actual and cur == "running":
+                # actual_status vanished after we had it — treat as still settling.
+                pass
+            status = actual or (f"{cur} (container not up yet)" if cur else "?")
+            if status != last:
+                self.log(f"  instance {instance_id}: {status} …")
+                last = status
             time.sleep(poll)
-        raise VastError(f"instance {instance_id} not running after {timeout}s — "
+        raise VastError(f"instance {instance_id} container not up after {timeout}s — "
                         f"destroy it so it stops billing")
