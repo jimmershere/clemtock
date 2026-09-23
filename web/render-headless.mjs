@@ -48,12 +48,13 @@ function loadPlaywright() {
     process.env.CLEMTOCK_PLAYWRIGHT,
     path.join(REPO, 'node_modules/playwright-core'),
     path.join(REPO, 'node_modules/playwright'),
-    // control host (laptop)
-    '/home/jimmer/.npm-global/lib/node_modules/n8n/node_modules/playwright-core',
-    '/home/jimmer/.npm-global/lib/node_modules/openclaw/node_modules/playwright-core',
-    // floor2
+    // any host: global npm installs (quasimodo as jimbro, pop-os as jimmer)
+    path.join(process.env.HOME || '', '.npm-global/lib/node_modules/playwright-core'),
+    path.join(process.env.HOME || '', '.npm-global/lib/node_modules/n8n/node_modules/playwright-core'),
+    path.join(process.env.HOME || '', '.npm-global/lib/node_modules/openclaw/node_modules/playwright-core'),
+    '/usr/local/lib/node_modules/playwright-core',
     '/usr/local/lib/node_modules/n8n/node_modules/playwright-core',
-    '/home/floor2/.npm-global/lib/node_modules/openclaw/node_modules/playwright-core',
+    '/usr/lib/node_modules/playwright-core',
   ].filter(Boolean);
   for (const c of cands) {
     try { return require(c); } catch (e) { /* try next */ }

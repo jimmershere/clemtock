@@ -13,28 +13,27 @@ references, and motion into data** (`ad-script.json`) that a reusable renderer i
 
 - **Honesty over magic.** The output labels what is AI-generated vs. user-supplied vs.
   motion-graphics. Stubs and unimplemented providers are labeled, never faked.
-- **Secrets never at rest** in anything clemtock writes. Keys stay in the *existing*
-  env files (`/app/tee-empire/.env`, `floor2:/home/floor2/content-machine/.env.agents`).
-  clemtock reads them into process env at runtime; it never copies a secret into this repo.
+- **Secrets never at rest** in anything clemtock writes. Keys stay in the existing `.env`
+  files on the host (`/app/portrender/.env`, `/app/clemtock/.env`, `/app/tee-empire/.env`) or the
+  encrypted vault. clemtock reads them into process env at runtime; it never copies a secret into this repo.
 - **Operator-readable artifacts.** `ad-script.json` is human-greppable and hand-editable.
 
-## Provider matrix (validated 2026-06-19, auth-only probes)
+## Provider matrix (validated 2026-06-19 on the previous host; re-probe on quasimodo with `scripts/probe-providers.sh`)
 
 | Modality | Provider | Status | Key source |
 |---|---|---|---|
-| Script brain (brief → `ad-script.json`) | OpenRouter (→ Claude / GPT) | ✅ | tee-empire `.env`, floor2 `.env.agents` |
-| Stills (hero / background) | OpenAI `gpt-image-1` | ✅ | tee-empire `.env` (`OPENAI_API_KEY`) |
+| Script brain (brief → `ad-script.json`) | OpenRouter (→ Claude / GPT) | ✅ | `/app/clemtock/.env` or tee-empire `.env` |
+| Stills (hero / background) | OpenAI Images (`gpt-image-2`, `CLEMTOCK_IMAGE_MODEL`) | ✅ | `/app/portrender/.env` (`OPENAI_API_KEY`) |
 | Stills (fast / cheap) | OpenRouter `black-forest-labs/flux-schnell` | ✅ | tee-empire `.env` |
-| Video clips (img/text → video) | kie.ai `flux-kontext-pro` | ✅ | floor2 `.env.agents` (`KIEAI_API_KEY`) |
-| Spokesperson + voice-over | HeyGen avatar + cloned voice | ✅ | floor2 `.env.agents` |
-| Alt LLM | Grok / xAI | ✅ | floor2 `.env.agents` |
-| Compose / encode | ffmpeg 6.1.1 (CPU, 40 cores) | ✅ | floor2 binary |
-| Local image/video gen | ComfyUI | ⚠️ unreachable | floor2 `COMFYUI_URL` |
-| Publish | post-bridge / YouTube | ◻️ key set, untested | floor2 `.env.agents` |
+| Video clips (img/text → video) | kie.ai `flux-kontext-pro` | ✅ | `/app/clemtock/.env` (`KIEAI_API_KEY`) |
+| Spokesperson + voice-over | HeyGen avatar + cloned voice | ✅ | `/app/clemtock/.env` |
+| Alt LLM | Grok / xAI | ✅ | `/app/clemtock/.env` |
+| Compose / encode | ffmpeg (CPU) | ⚠️ verify on quasimodo | local binary (`sudo apt install ffmpeg`) |
+| Local image/video gen | ComfyUI | ◻️ not configured | `COMFYUI_URL` if ever set up |
+| Publish | post-bridge / YouTube | ◻️ untested here | `/app/clemtock/.env` |
 
-floor2's own `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` are **401 (expired)** — clemtock uses
-OpenRouter for Claude/GPT and tee-empire's OpenAI key for `gpt-image-1`. floor2's GPU
-(TITAN X) is currently faulted, so treat ffmpeg as CPU-only.
+The OpenAI key now lives in `/app/portrender/.env` (new key, 2026-09-22) and is shared by
+portrender and clemtock. Treat ffmpeg as CPU-only unless quasimodo has a working GPU.
 
 ## Pipeline
 
@@ -44,7 +43,7 @@ OpenRouter for Claude/GPT and tee-empire's OpenAI key for `gpt-image-1`. floor2'
        ▼
  [1] brief  ── ScriptProvider (OpenRouter) ─────────▶ ad-script.json
        │                                                   │
- [2] assets ── ffmpeg on floor2: keyframe / trim ──▶ assets/*  (from uploads)
+ [2] assets ── ffmpeg (local): keyframe / trim ──▶ assets/*  (from uploads)
        │       AI gen for gaps:                            │
        │        ImageProvider (gpt-image-1 / flux)         │
        │        VideoProvider (kie.ai)                     │
@@ -52,7 +51,7 @@ OpenRouter for Claude/GPT and tee-empire's OpenAI key for `gpt-image-1`. floor2'
        ▼                                                   ▼
  [3] render ── data-driven DC renderer plays ad-script.json @ 1080×1920
        │
- [4] export ── client WebCodecs+mp4-muxer  |  floor2 ffmpeg mux (video clips + audio)
+ [4] export ── client WebCodecs+mp4-muxer  |  local ffmpeg mux (video clips + audio)
        │
  [5] publish (optional) ── post-bridge / YouTube
 ```
@@ -91,16 +90,15 @@ template never requires touching existing scenes.
 clemtock's backend is a stdlib-first Python package (`backend/clemtock`). Provider calls
 use `urllib` — no third-party HTTP dep — so it runs anywhere Python 3.12 is present.
 
-Because the video/avatar keys live only on floor2, the runtime environment is **assembled
-ephemerally** by [`scripts/load-env.sh`](scripts/load-env.sh): it sources tee-empire's
-`.env` for OpenAI/OpenRouter and pulls floor2-only keys over `ssh` into the current shell.
-Nothing is written to disk. ffmpeg-heavy steps (`assets`, `export`) shell out to floor2 via
-`ssh` + `rsync` — the same push model Local-81 uses.
+The runtime environment is assembled from the host's `.env` files by
+`config.load_env_files()` (and [`scripts/load-env.sh`](scripts/load-env.sh) for a shell):
+`/app/portrender/.env` → `/app/clemtock/.env` → `/app/tee-empire/.env`, nothing written back.
+ffmpeg-heavy steps (`assets`, `compose`, `export`) run locally on the same host.
 
-## Studio — web control panel + job API (floor2)
+## Studio — web control panel + job API (quasimodo)
 
 `backend/clemtock/server.py` (stdlib `ThreadingHTTPServer`) serves the **studio** UI and a
-small job API on floor2:3053, so humans drive clemtock with buttons and AI/CLI users hit the
+small job API on quasimodo:3053, so humans drive clemtock with buttons and AI/CLI users hit the
 same endpoints. Vault keys are loaded into the server env at startup, so jobs authenticate.
 
 - **UI** [`web/studio.html`](web/studio.html): pick a **format** (recipe), cast a **hero**
@@ -124,19 +122,20 @@ category, **roles**, tags, dims) + HeyGen **models**. Roles: `hero`=mascot/focal
 `snip-music` (≈12 s, stills/snips + Ken-Burns + music, no voice) and `motion-tutorial`
 (≈40 s, avatar/voice narration + real clips + captions).
 
-## Deployment (floor2)
+## Deployment (quasimodo)
 
-clemtock runs on **floor2** (40 cores; this laptop is the weaker control node). Canonical
-copy at `floor2:/home/floor2/clemtock`; the laptop pushes with
-`rsync -a --delete` (excludes `out/`, `.vault/`, `node_modules/`, `__pycache__/`) — the same
-push model as Local-81. Headless render there uses snap chromium (`/snap/bin/chromium`,
-auto-detected) via `playwright-core` + system `ffmpeg`.
+clemtock runs on **quasimodo** (192.168.0.20, user `jimbro`, `/app/clemtock`). pop-os is the
+git checkout and pushes with `local81 deploy --scope clemtock` (`.local81/config.ini`: rsync
+`--delete`, excludes `out/`, `uploads/`, `.vault/`, `node_modules/`, `.env`, `__pycache__/`).
+First run on the host: `bash scripts/quasimodo-setup.sh` (apt: ffmpeg, chromium,
+python3-cryptography, nodejs/npm; `npm install`; probe). Headless render uses whichever
+chromium `render-headless.mjs` finds (`/usr/bin/chromium`, `/snap/bin/chromium`, or
+`CLEMTOCK_CHROMIUM`) via `playwright-core` + system `ffmpeg`.
 
-**Web host:** `python3 -m http.server 3053 --bind 0.0.0.0` in `web/`, viewed at
-**http://192.168.1.206:3053**. Port 3053 is ufw-allowed-from-Anywhere; 8910 is not (ufw
-default-deny, and floor2 is a k8s node — its firewall is off-limits). The floor2 user has
-`Linger=yes`, so the detached server survives ssh disconnect without a systemd unit. The
-in-repo `web/out -> ../out` symlink exposes rendered MP4s at `/out/`.
+**Studio host:** `scripts/serve.sh start` (nohup/setsid) or `scripts/install-user-service.sh`
+(systemd user unit; run `sudo loginctl enable-linger jimbro` once so it survives logout) →
+**http://192.168.0.20:3053**. If quasimodo runs ufw, allow 3053 from the LAN. The in-repo
+`web/out -> ../out` symlink exposes rendered MP4s at `/out/`.
 
 ## Secret vault
 
@@ -145,7 +144,7 @@ in-repo `web/out -> ../out` symlink exposes rendered MP4s at `/out/`.
 Poly1305** AEAD (scrypt over Argon2id because the laptop's `cryptography` 41.x lacks the
 Argon2 KDF). The vault file holds only `salt`/`nonce`/`ciphertext` (0600); the plaintext
 name→secret map never lands on disk. Passphrase comes from `CLEMTOCK_VAULT_PASSPHRASE` or a
-0600 keyfile (`~/.clemtock/passphrase`), so a headless floor2 run self-unlocks while disk/git
+0600 keyfile (`~/.clemtock/passphrase`), so a headless quasimodo run self-unlocks while disk/git
 exposure stays useless.
 
 ```bash
@@ -157,9 +156,9 @@ clemtock vault list                       # names only
 
 `main()` auto-loads the vault into process env for every non-vault command, so `script` /
 `assets` / `probe` transparently use vault-stored keys (and the bash `probe` inherits them).
-On floor2 the vault holds all `content-machine/.env.agents` keys **plus** the working
-gpt-image-1 key copied from the laptop — `clemtock probe` authenticates all five providers
-reading purely from the vault.
+The vault is optional on quasimodo (needs `python3-cryptography`); the `.env` files above are
+the primary source. If you want at-rest encryption, `clemtock vault import-env /app/clemtock/.env`
+then delete the plain file.
 
 ## Phases
 
@@ -170,7 +169,7 @@ reading purely from the vault.
 | 2 | `assets`: AI image-gen (gpt-image-1) + ffmpeg video posters | ✅ done — `clemtock assets`, verified with a real generation |
 | 3 | Template library: title / photo / video / terminal / split / cta | ✅ done — six templates in `web/templates.js` |
 | 4 | `export`: headless render → MP4 on disk (`out/`) | ✅ done — `clemtock export` via `web/render-headless.mjs` (chromium+ffmpeg) |
-| 5 | kie.ai video + HeyGen avatar providers (true motion-gen) | **✅ both verified.** `clemtock avatar` → HeyGen talking-head + cloned voice (720×1280 H.264+AAC). `clemtock video` → kie kling-2.6 image-to-video (5s 1920×1080) — createTask→poll→download all working. **Caveat:** kie's *file-upload* subdomain (`kieai.redpandaai.co`) rejects floor2's IP even when `api.kie.ai` accepts it, so **local-image seeding is blocked**; pass a **public image URL** to `--image` (supported) until that upload host is whitelisted. Two kie gotchas baked into the provider: force **IPv4** (api.kie.ai has AAAA → IPv6 egress isn't whitelisted) and a **browser User-Agent** (Cloudflare bot-blocks `Python-urllib` with error 1010). |
+| 5 | kie.ai video + HeyGen avatar providers (true motion-gen) | **✅ both verified.** `clemtock avatar` → HeyGen talking-head + cloned voice (720×1280 H.264+AAC). `clemtock video` → kie kling-2.6 image-to-video (5s 1920×1080) — createTask→poll→download all working. **Caveat (observed on the previous host, re-test on quasimodo):** kie's *file-upload* subdomain (`kieai.redpandaai.co`) rejected that host's IP even when `api.kie.ai` accepted it, so **local-image seeding may be blocked**; pass a **public image URL** to `--image` (supported) if so. Two kie gotchas baked into the provider: force **IPv4** (api.kie.ai has AAAA → IPv6 egress isn't whitelisted) and a **browser User-Agent** (Cloudflare bot-blocks `Python-urllib` with error 1010). |
 | 6 | ffmpeg compositor: real clips + audio under the graphics layer | **✅ verified.** `clemtock compose` — renders the graphics with alpha (`render-headless --alpha` → qtrle overlay), lays clips on an ink base at their scene windows, overlays graphics, muxes per-clip audio (delayed to scene start). Falls back to plain export when an ad-script has no clips. `clemtock run` ties script→assets→compose into one command. |
 | 7 | Publish to socials (Post Bridge) | **✅ done.** `clemtock accounts` lists connected socials; `clemtock publish --video <mp4> --to youtube,twitter --caption "…"` is **dry-run by default**, posts only with `--execute` (irreversible). Flow: create-upload-url → PUT bytes → POST /v1/posts. Studio has a per-output ⤴ publish panel with dry-run + a confirm-gated live post. |
 
@@ -184,7 +183,7 @@ its folder), and the server **rescans every 15 minutes**, **before every plan/ex
 ## Deploy via local81
 
 clemtock ships through **local81** (the deploy control-plane it lives alongside):
-`.local81/config.ini` defines a `clemtock` scope (source `.` → `floor2:/home/floor2/clemtock`,
+`.local81/config.ini` defines a `clemtock` scope (source `.` → `quasimodo:/app/clemtock`,
 rsync with excludes) and `.local81/hooks/post-deploy.sh` restarts the control server + smoke-checks it.
 
 ```bash
@@ -212,7 +211,7 @@ copy → terminal → HeyGen talking-avatar (with voice audio) → CTA, as one 1
 file. The alpha overlay keeps the DOM-rendered copy/motion-graphics pixel-perfect over real footage.
 
 **kie video gen caveat (unchanged):** `assets` generates `source:gen` videos via kie only when the
-asset carries a public `seed_url` (kie's file-upload host is IP-gated for floor2). HeyGen avatar gen
+asset carries a public `seed_url` (kie's file-upload host was IP-gated on the previous host). HeyGen avatar gen
 has no such limit.
 
 `clemtock video --image <png> --prompt <...>` (kie image-to-video, kling-2.6) and

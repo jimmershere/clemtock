@@ -1,0 +1,16 @@
+# systemd user unit template — filled in by scripts/install-user-service.sh
+[Unit]
+Description=clemtock studio + job API (Portwright ad generator)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=@ROOT@/backend
+# keys are read by the app from /app/portrender/.env, /app/clemtock/.env, /app/tee-empire/.env (+ vault)
+ExecStart=@PYTHON@ -u -m clemtock.server --host @HOST@ --port @PORT@
+Restart=on-failure
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

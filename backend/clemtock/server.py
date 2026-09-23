@@ -1,4 +1,4 @@
-"""clemtock control server — serves the studio UI + a small job API on floor2.
+"""clemtock control server — serves the studio UI + a small job API on quasimodo (:3053).
 
 Endpoints (JSON unless noted):
   GET  /api/health                 -> {ok, jobs}
@@ -278,7 +278,11 @@ def _scan_loop():
 
 
 def main(host: str = "0.0.0.0", port: int = 3053):
-    vault_mod.apply_to_env()  # provider keys for jobs
+    from .config import load_env_files
+    loaded = load_env_files()   # /app/portrender/.env etc. — provider keys for jobs
+    vault_mod.apply_to_env()
+    print(f"env: {', '.join(sorted(loaded)) or 'nothing loaded from .env files'}"
+          f"; OPENAI_API_KEY {'present' if os.environ.get('OPENAI_API_KEY') else 'MISSING'}")
     mimetypes.add_type("video/mp4", ".mp4")
     try:
         print(f"library scan at startup: {lib_mod.rebuild()}")

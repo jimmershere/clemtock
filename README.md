@@ -13,8 +13,11 @@ Generalized from the `clanimator` "Local 81 Promo" — the hand-authored animati
 ## Quickstart
 
 ```bash
-# 1. Assemble the runtime environment (ephemeral — sources existing env files + floor2).
-#    Nothing is written to disk; keys never enter this repo.
+# 0. First time on quasimodo: install ffmpeg/chromium/node + python3-cryptography, npm install, probe.
+bash scripts/quasimodo-setup.sh
+
+# 1. Keys are read from /app/portrender/.env → /app/clemtock/.env → /app/tee-empire/.env
+#    (never written back). Source this only if you want them in your shell too.
 source scripts/load-env.sh
 
 # 2. Confirm every provider authenticates (auth-only, no generation spend).
@@ -44,8 +47,11 @@ clemtock/
   DESIGN.md                      architecture, schema, phases, provider matrix
   schema/ad-script.schema.json   the ad-script contract
   scripts/
-    load-env.sh                  assemble runtime env (tee-empire .env + floor2 over ssh)
-    probe-providers.sh           auth-only health check for every provider
+    load-env.sh                  export keys from the .env files (no ssh, nothing written)
+    probe-providers.sh           auth-only health check for every provider + local toolchain
+    quasimodo-setup.sh           one-shot host setup (apt packages, npm install, probe)
+    serve.sh                     start/stop the studio server (0.0.0.0:3053)
+    install-user-service.sh      systemd user unit for the studio (survives logout with linger)
   backend/clemtock/              stdlib-first Python package
     config.py                    provider config from env (no secrets at rest)
     providers/                   ScriptProvider / Image / Video / Avatar interfaces + impls
@@ -62,10 +68,22 @@ clemtock/
 
 ## Secrets
 
-clemtock **never stores keys**. They stay in the existing files they already live in:
+clemtock **never stores keys** in the repo. It reads them at runtime from, in order:
 
-- `/app/tee-empire/.env` — `OPENAI_API_KEY` (gpt-image-1), `OPENROUTER_API_KEY`
-- `floor2:/home/floor2/content-machine/.env.agents` — `KIEAI_API_KEY`, `HEYGEN_*`,
-  `OPENROUTER_API_KEY`, `XAI_API_KEY`, publish keys
+- `/app/portrender/.env` — `OPENAI_API_KEY` (shared with portrender; gpt-image-2 stills)
+- `/app/clemtock/.env` — `KIEAI_API_KEY`, `HEYGEN_API_KEY`, `HEYGEN_VOICE_CLONE_ID`,
+  `HEYGEN_CARTOON_AVATAR_ID`, `XAI_API_KEY`, `POST_BRIDGE_API_KEY`, `OPENROUTER_API_KEY` (gitignored; chmod 600)
+- `/app/tee-empire/.env` — `OPENROUTER_API_KEY`, Printify (when tee-empire is cloned on this host)
+- the encrypted vault (`clemtock vault …`, needs `python3-cryptography`) — optional
 
-`scripts/load-env.sh` loads them into the current shell at runtime only.
+`config.load_env_files()` does this for the CLI and the studio server; `scripts/load-env.sh`
+does the same for an interactive shell. Override the list with `CLEMTOCK_ENV_FILES=a:b:c`.
+
+## Where it runs
+
+**quasimodo**, `/app/clemtock` (user `jimbro`). ffmpeg, chromium, node and every provider call are
+local to that host; there is no remote render host. pop-os pushes code with
+`local81 deploy --scope clemtock` (excludes `out/`, `uploads/`, `.vault/`, `node_modules/`, `.env`),
+and the post-deploy hook restarts the studio. Studio: **http://192.168.0.20:3053**
+(`scripts/serve.sh start` or `scripts/install-user-service.sh`). portrender on the same host
+drops approved art into `assets/<category>/` and calls `POST /api/rescan`.

@@ -90,7 +90,7 @@ def run(script_path: Path, repo: Path, cfg: Config, aspect: str = "9:16") -> dic
                 continue
             try:
                 if img_provider is None:
-                    img_provider = OpenAIImageProvider(cfg.openai_key)
+                    img_provider = OpenAIImageProvider(cfg.openai_key, model=cfg.openai_image_model)
                 img_provider.generate(prompt, out_png, size=a.get("aspect", aspect))
                 a["src"] = f"assets/{out_png.name}"
                 summary["generated"].append(aid)

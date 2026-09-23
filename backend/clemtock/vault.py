@@ -7,7 +7,7 @@ salt + nonce + ciphertext; the plaintext (a name->secret map) never touches disk
 
 Threat model: protects secrets at rest — so they're never sitting in plaintext .env files,
 git, logs, or backups. The master passphrase comes from `CLEMTOCK_VAULT_PASSPHRASE` or a
-0600 key file (`~/.clemtock/passphrase`), so a headless service on floor2 can self-unlock
+0600 key file (`~/.clemtock/passphrase`), so the headless service on quasimodo can self-unlock
 while casual disk/repo exposure stays useless. Decrypted values are loaded into the process
 env at runtime only (see `apply_to_env`).
 """
@@ -20,7 +20,10 @@ import os
 import secrets as _sysrandom
 from pathlib import Path
 
-from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+try:
+    from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+except Exception:  # cryptography is optional: without it the vault is unavailable, .env files still work
+    ChaCha20Poly1305 = None  # type: ignore
 
 _REPO = Path(__file__).resolve().parents[2]
 DEFAULT_VAULT = Path(os.environ.get("CLEMTOCK_VAULT", str(_REPO / ".vault" / "clemtock.vault")))
