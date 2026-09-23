@@ -33,7 +33,7 @@ DEFAULT_MODEL = "qwen3:8b"
 class OllamaScriptProvider(ScriptProvider):
     name = "ollama"
 
-    def __init__(self, model: str = "", host: str = "", timeout: int = 600,
+    def __init__(self, model: str = "", host: str = "", timeout: int = 900,
                  num_predict: int = 4000, temperature: float = 0.7):
         self.host = (host or os.environ.get("OLLAMA_HOST") or DEFAULT_HOST).rstrip("/")
         if not self.host.startswith("http"):          # OLLAMA_HOST is often "host:port"
@@ -85,6 +85,11 @@ class OllamaScriptProvider(ScriptProvider):
             ],
             "stream": False,
             "format": "json",          # ollama's JSON mode; still parsed defensively below
+            # Reasoning models (qwen3) otherwise spend most of their tokens in <think>
+            # before writing a line of JSON. On CPU that is the difference between a
+            # script in ~3 min and one that never finishes: measured 2.4s vs a >2 min
+            # timeout on pop-os, 2026-09-23. Harmless for non-reasoning models.
+            "think": False,
             "options": {
                 "temperature": self.temperature,
                 "num_predict": self.num_predict,
@@ -109,4 +114,46 @@ class OllamaScriptProvider(ScriptProvider):
             raise ProviderUnavailable(f"ollama returned no content: {str(payload)[:200]}")
         # Reasoning models (qwen3) may emit <think>…</think> ahead of the JSON;
         # _parse_script slices from the first { to the last }, which drops it.
-        return _parse_script(content)
+        return _repair(_parse_script(content))
+
+
+def _repair(script: dict) -> dict:
+    """Fix the shape mistakes small models make, so the renderer never sees them.
+
+    _SYSTEM spells these rules out explicitly, which is precisely the evidence that
+    models get them wrong — a 8B at Q4 ignores them routinely where Claude does not.
+    Repairing here rather than in the renderer keeps the weak-model tax in the weak-model
+    provider. Every branch below was observed from qwen3:8b on 2026-09-23.
+    """
+    # `assets` must be an object keyed by id; qwen3 emits a list of {id, ...}.
+    assets = script.get("assets")
+    if isinstance(assets, list):
+        fixed: dict = {}
+        for entry in assets:
+            if isinstance(entry, dict) and entry.get("id"):
+                aid = str(entry.pop("id"))
+                fixed[aid] = entry
+            elif isinstance(entry, str):
+                fixed[entry] = {"kind": "image", "source": "gen", "prompt": entry}
+        script["assets"] = fixed
+    elif not isinstance(assets, dict):
+        script["assets"] = {}
+
+    for scene in script.get("scenes") or []:
+        if not isinstance(scene, dict):
+            continue
+        # `copy` must be an object, never a bare string.
+        if isinstance(scene.get("copy"), str):
+            scene["copy"] = {"headline": scene["copy"]}
+        elif not isinstance(scene.get("copy"), dict):
+            scene["copy"] = {}
+        # scene assets must be an ARRAY of ids under `assets`, not asset/assetId/image.
+        for wrong in ("asset", "assetId", "image"):
+            if wrong in scene and "assets" not in scene:
+                v = scene.pop(wrong)
+                scene["assets"] = v if isinstance(v, list) else [v]
+            else:
+                scene.pop(wrong, None)
+        if "assets" in scene and not isinstance(scene["assets"], list):
+            scene["assets"] = [scene["assets"]]
+    return script

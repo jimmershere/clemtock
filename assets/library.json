@@ -11,8 +11,7 @@
     "characters",
     "creatures",
     "logos",
-    "mascots",
-    "uploads"
+    "mascots"
   ],
   "assets": [
     {
@@ -37,11 +36,11 @@
       "thumb": ".thumbs/jimmer.png",
       "category": "characters",
       "roles": [
-        "reference"
+        "character"
       ],
       "name": "Jimmer",
       "tags": [
-        "upload"
+        "dropin"
       ],
       "w": 154,
       "h": 282
@@ -257,51 +256,6 @@
       ],
       "w": 402,
       "h": 466
-    },
-    {
-      "id": "00_fleet",
-      "file": "uploads/00_fleet.png",
-      "thumb": ".thumbs/00_fleet.png",
-      "category": "uploads",
-      "roles": [
-        "reference"
-      ],
-      "name": "00 Fleet",
-      "tags": [
-        "upload"
-      ],
-      "w": 2396,
-      "h": 902
-    },
-    {
-      "id": "01_install",
-      "file": "uploads/01_install.png",
-      "thumb": ".thumbs/01_install.png",
-      "category": "uploads",
-      "roles": [
-        "reference"
-      ],
-      "name": "01 Install",
-      "tags": [
-        "upload"
-      ],
-      "w": 2036,
-      "h": 2702
-    },
-    {
-      "id": "02_help",
-      "file": "uploads/02_help.png",
-      "thumb": ".thumbs/02_help.png",
-      "category": "uploads",
-      "roles": [
-        "reference"
-      ],
-      "name": "02 Help",
-      "tags": [
-        "upload"
-      ],
-      "w": 2296,
-      "h": 1602
     }
   ],
   "models": [
