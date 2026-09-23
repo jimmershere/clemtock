@@ -67,7 +67,9 @@ brief ──► ollama (pop-os, free) ──────────────
 ```
 
 Note that the GPU appears **once**, and only for b-roll. An ad that is pure
-mascot-on-a-background never rents anything.
+mascot-on-a-background never rents anything — but per PR-11 the b-roll path is
+*in* for v1, so expect most ads to touch the rented 4090 at least briefly. That
+makes the batching rule below load-bearing rather than theoretical.
 
 ## The cost rule: batch, never per-job
 
@@ -143,7 +145,7 @@ Worth knowing now even though it is not being built:
 | PR-13 | **HeyGen auto-reload is ON** — `$75` recharged whenever the wallet drops below `$5`. The budget is not the $98.78 showing; it is uncapped until that is switched off. Turn it off, or decide the ceiling deliberately. |
 | PR-14 | HeyGen has **zero cartoon avatars** in its 1,264-avatar stock library — all photoreal presenters. Cartoon requires the talking-photo upload path (a payload branch `heygen.py` does not have). Is HeyGen worth it for a cartoon product at all? |
 | PR-10 | Where does the mascot mouth-sprite set live — portrender `brands/<slug>/` (and is that OK for a public repo, cf. PR-5) or clemtock `assets/`? |
-| PR-11 | Does b-roll need Wan at all for v1, or do Ken-Burns moves over portrender stills carry the ad? If the latter, the GPU is not needed *at all* yet and vast.ai can stay unrented. |
+| ~~PR-11~~ | **ANSWERED 2026-09-23 — keep it.** "we still want the cinematic b-roll via Wan 2.2 on a rented 4090 included in this version." So the rented GPU is part of v1, not a later option, and `comfy_video.py` is in scope. Ken-Burns over stills stays available as the cheap fallback, not the plan. |
 | PR-12 | Resale pricing — unanswerable until `cost.json` has real numbers (stage 2). |
 
 ## Rented-GPU lifecycle — verified live 2026-09-23
@@ -172,6 +174,44 @@ Two bugs the live runs exposed, both now fixed:
 
 That ~3 min of paid provisioning per rent is the whole argument for batching: it is
 ~$0.02 of pure overhead every time you rent, regardless of how much work you then do.
+
+## Cartoon avatar chain — built and verified 2026-09-23
+
+`python3 -m clemtock avatar --text "…" --sprites assets/mouths/<set> --out out/x.mp4`
+
+Chatterbox (MIT) → Rhubarb (MIT) → ffmpeg. No GPU, no API key, no per-clip cost.
+Output verified: **1080×1920 h264 + aac**, audio length exactly matching the video,
+34 mouth cues across 8 distinct shapes on a 5.2 s line — real lip-sync, not a
+stuck mouth.
+
+**Measured speed, which corrects the research note.** `local-ai-options.md` cited
+"Chatterbox-Nano ~3× faster than realtime on 8 cores". That is the **Nano**
+variant; the default model on pop-os is **8–15× SLOWER than realtime**:
+
+| line | chars | audio | synthesis |
+|---|---|---|---|
+| short | 30 | 1.64 s | 25 s (15× realtime) |
+| long | 124 | 5.56 s | 44 s (8× realtime) |
+
+So a 30-second voice-over costs roughly **4–8 minutes of CPU**. Fine for batch and
+overnight work, wrong for interactive iteration. Chatterbox-Nano is the upgrade
+path if that becomes the bottleneck. Rhubarb and ffmpeg are negligible by
+comparison — the whole rest of the chain is seconds.
+
+Char rate held steady between the short and long lines (18.3 vs 22.3 char/s),
+which rules out silent truncation of long text.
+
+**Packaging.** Chatterbox lives in `.venv` and is driven out-of-process
+(`_chatterbox_worker.py`), so clemtock's runtime stays stdlib-only and still
+imports on a host with no venv. Note `chatterbox-tts` pins `torch==2.6.0` and pip
+resolves that to the **CUDA** build by default — 6.2 GB of venv on a machine with
+no NVIDIA GPU. `setup-avatar-chain.sh` force-reinstalls the CPU wheels and purges
+the orphaned `nvidia-*`/`triton` packages: **6.2 GB → 1.8 GB**.
+
+**Sprite sets** live in `assets/mouths/<name>/` as `A.png … F.png` (G/H/X
+optional). `_placeholder/` is a generated test set, not art. Six images is a
+complete mouth — `sprite_for()` degrades missing shapes along a documented
+fallback chain, all the way to `A` if need be, so a partial set still renders.
 
 ## Status
 

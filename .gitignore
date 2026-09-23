@@ -18,3 +18,6 @@ __pycache__/
 .venv/
 *.egg-info/
 node_modules/
+
+# vendored third-party binaries (Rhubarb ~87MB) — fetched by scripts/setup-avatar-chain.sh
+vendor/

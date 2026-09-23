@@ -1,8 +1,9 @@
 """clemtock CLI — `python -m clemtock <command>`.
 
 Implemented now: `probe` (provider health), `script` (brief -> ad-script.json via
-OpenRouter). `assets`, `render`, `export`, `run` are scaffolded and labeled as TODO so the
-tool never pretends to do work it can't yet.
+OpenRouter or local ollama), `avatar` (cartoon talking head, entirely local).
+`assets`, `render`, `export`, `run` are scaffolded and labeled as TODO so the tool
+never pretends to do work it can't yet.
 """
 from __future__ import annotations
 
@@ -109,6 +110,32 @@ def cmd_script(args: argparse.Namespace) -> int:
     return 0
 
 
+def _avatar_cartoon(args: argparse.Namespace) -> int:
+    """Chatterbox -> Rhubarb -> ffmpeg. Everything local; nothing billable."""
+    from .providers.cartoon_avatar import CartoonAvatarProvider
+    import time
+
+    prov = CartoonAvatarProvider(
+        sprites_dir=Path(args.sprites),
+        voice_ref=Path(args.voice_ref) if args.voice_ref else None,
+        background=Path(args.background) if args.background else None,
+        width=args.width, height=args.height, fps=args.fps,
+        bg_color=args.bg_color, keep_workdir=args.keep_workdir)
+
+    out = Path(args.out)
+    t0 = time.time()
+    try:
+        prov.generate(args.text, out)
+    except ProviderUnavailable as e:
+        print(f"clemtock avatar: {e}", file=sys.stderr)
+        print("  (run: bash scripts/setup-avatar-chain.sh)", file=sys.stderr)
+        return 2
+    el = time.time() - t0
+    print(f"clemtock avatar: wrote {out} in {el:.1f}s "
+          f"({out.stat().st_size / 1e6:.1f} MB, {len(args.text)} chars)")
+    return 0
+
+
 def _todo(name: str, detail: str) -> int:
     print(f"clemtock {name}: NOT YET IMPLEMENTED (Phase scaffold).\n  {detail}",
           file=sys.stderr)
@@ -170,6 +197,23 @@ def cmd_video(args: argparse.Namespace) -> int:
 
 
 def cmd_avatar(args: argparse.Namespace) -> int:
+    """Talking avatar. Two backends, one command.
+
+    Defaults to `cartoon`: it is free, runs on CPU, and is what these brands actually
+    are (mascots, not people). `heygen` is the paid photoreal path — worth it for the
+    occasional premium spot, but it bills per video and its stock library has no
+    cartoon avatars at all.
+    """
+    if args.provider == "cartoon":
+        if not args.sprites:
+            print("clemtock avatar: --sprites is required for the cartoon provider",
+                  file=sys.stderr)
+            return 2
+        return _avatar_cartoon(args)
+    return _avatar_heygen(args)
+
+
+def _avatar_heygen(args: argparse.Namespace) -> int:
     """HeyGen talking-avatar segment (Phase 5)."""
     from .providers.heygen import HeyGenAvatarProvider
     cfg = Config.from_env()
@@ -460,11 +504,27 @@ def build_parser() -> argparse.ArgumentParser:
     vid.add_argument("--out", default=str(_REPO / "out" / "clem-clip.mp4"))
     vid.set_defaults(func=cmd_video)
 
-    av = sub.add_parser("avatar", help="HeyGen talking-avatar segment")
+    av = sub.add_parser("avatar", help="Talking avatar: cartoon (local, free) or heygen (paid)")
     av.add_argument("--text", required=True, help="what the avatar says")
-    av.add_argument("--avatar-id", dest="avatar_id", default=None)
-    av.add_argument("--voice-id", dest="voice_id", default=None)
+    av.add_argument("--provider", choices=("cartoon", "heygen"), default="cartoon",
+                    help="cartoon = Chatterbox+Rhubarb+ffmpeg on this host, no cost (default)")
     av.add_argument("--out", default=str(_REPO / "out" / "clem-avatar.mp4"))
+    # --- cartoon ---
+    av.add_argument("--sprites", default=None,
+                    help="[cartoon] mouth sprite dir: A.png … F.png (G/H/X optional)")
+    av.add_argument("--voice-ref", dest="voice_ref", default=None,
+                    help="[cartoon] WAV to clone the voice from (~5s). Consent must be on record.")
+    av.add_argument("--background", default=None, help="[cartoon] backdrop behind the mascot")
+    av.add_argument("--width", type=int, default=1080)
+    av.add_argument("--height", type=int, default=1920)
+    av.add_argument("--fps", type=int, default=30)
+    av.add_argument("--bg-color", dest="bg_color", default="black",
+                    help="[cartoon] pad colour when no --background")
+    av.add_argument("--keep-workdir", dest="keep_workdir", action="store_true",
+                    help="[cartoon] keep voice.wav + the cue list for inspection")
+    # --- heygen ---
+    av.add_argument("--avatar-id", dest="avatar_id", default=None, help="[heygen]")
+    av.add_argument("--voice-id", dest="voice_id", default=None, help="[heygen]")
     av.set_defaults(func=cmd_avatar)
 
     comp = sub.add_parser("compose", help="composite real clips + audio under graphics (Phase 6)")

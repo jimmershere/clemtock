@@ -8,12 +8,148 @@
     "reference": "uploaded reference / drop-in"
   },
   "categories": [
+    "_placeholder",
     "characters",
     "creatures",
     "logos",
     "mascots"
   ],
   "assets": [
+    {
+      "id": "A",
+      "file": "mouths/_placeholder/A.png",
+      "thumb": ".thumbs/A.png",
+      "category": "_placeholder",
+      "roles": [
+        "reference"
+      ],
+      "name": "A",
+      "tags": [
+        "dropin"
+      ],
+      "w": 512,
+      "h": 512
+    },
+    {
+      "id": "B",
+      "file": "mouths/_placeholder/B.png",
+      "thumb": ".thumbs/B.png",
+      "category": "_placeholder",
+      "roles": [
+        "reference"
+      ],
+      "name": "B",
+      "tags": [
+        "dropin"
+      ],
+      "w": 512,
+      "h": 512
+    },
+    {
+      "id": "C",
+      "file": "mouths/_placeholder/C.png",
+      "thumb": ".thumbs/C.png",
+      "category": "_placeholder",
+      "roles": [
+        "reference"
+      ],
+      "name": "C",
+      "tags": [
+        "dropin"
+      ],
+      "w": 512,
+      "h": 512
+    },
+    {
+      "id": "D",
+      "file": "mouths/_placeholder/D.png",
+      "thumb": ".thumbs/D.png",
+      "category": "_placeholder",
+      "roles": [
+        "reference"
+      ],
+      "name": "D",
+      "tags": [
+        "dropin"
+      ],
+      "w": 512,
+      "h": 512
+    },
+    {
+      "id": "E",
+      "file": "mouths/_placeholder/E.png",
+      "thumb": ".thumbs/E.png",
+      "category": "_placeholder",
+      "roles": [
+        "reference"
+      ],
+      "name": "E",
+      "tags": [
+        "dropin"
+      ],
+      "w": 512,
+      "h": 512
+    },
+    {
+      "id": "F",
+      "file": "mouths/_placeholder/F.png",
+      "thumb": ".thumbs/F.png",
+      "category": "_placeholder",
+      "roles": [
+        "reference"
+      ],
+      "name": "F",
+      "tags": [
+        "dropin"
+      ],
+      "w": 512,
+      "h": 512
+    },
+    {
+      "id": "G",
+      "file": "mouths/_placeholder/G.png",
+      "thumb": ".thumbs/G.png",
+      "category": "_placeholder",
+      "roles": [
+        "reference"
+      ],
+      "name": "G",
+      "tags": [
+        "dropin"
+      ],
+      "w": 512,
+      "h": 512
+    },
+    {
+      "id": "H",
+      "file": "mouths/_placeholder/H.png",
+      "thumb": ".thumbs/H.png",
+      "category": "_placeholder",
+      "roles": [
+        "reference"
+      ],
+      "name": "H",
+      "tags": [
+        "dropin"
+      ],
+      "w": 512,
+      "h": 512
+    },
+    {
+      "id": "X",
+      "file": "mouths/_placeholder/X.png",
+      "thumb": ".thumbs/X.png",
+      "category": "_placeholder",
+      "roles": [
+        "reference"
+      ],
+      "name": "X",
+      "tags": [
+        "dropin"
+      ],
+      "w": 512,
+      "h": 512
+    },
     {
       "id": "fun-faith",
       "file": "characters/fun-faith.png",
