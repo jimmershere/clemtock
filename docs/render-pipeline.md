@@ -98,6 +98,53 @@ open self-serve API, which is the single strongest argument for the retainer mod
 issue #8. Whether a rented GPU lifts TTS throughput materially is **untested** —
 measure before promising anyone a turnaround time.
 
+## Business model — DECIDED 2026-09-23
+
+**Customer: local businesses. Model: Option A, mascot-as-a-service retainer.**
+(jimmer, answering [issue #8](https://github.com/jimmershere/portrender/issues/8).)
+
+- **One-time build fee $500–1,500** — character design, the nine mouth shapes, a cloned
+  voice, the brand theme. This is the only genuinely manual work, and it is also what
+  makes the client stay: their mascot lives here.
+- **Then $299–799/mo** for an agreed number of videos.
+
+Anchored against the two market poles: a custom 2D mascot build plus three videos runs
+**$20–28k** at an agency (median 60 s explainer quote: **$9,680**), while small-business
+social retainers run **$1–5k/mo**. We are ~5% of the former and the cheap end of the
+latter, at a marginal cost of approximately zero.
+
+Deliberately **not** priced against HeyGen/Creatify at $19–29/mo. That would frame this as
+a cheaper talking-head tool, which is the one thing it is not — those sell a stranger's
+face reading your script; we sell *their own character*, consistently, forever.
+
+What this decision rules out for now: no self-serve credits, no public API, no auth, no
+billing system. Fleet rule 2 stands, and the retainer model does not need any of them.
+
+## The jimmer character
+
+Source art: `portrender/brands/jimmer/character.png` (1024x1536, transparent background),
+from Drive → Pictures → ice-stone. Mouth sprites derived from it, both gitignored (PR-5).
+
+Regenerate after a new export of the same character — the coordinates are fractions, so
+they survive a resize:
+
+```bash
+python3 scripts/sprites-from-character.py \
+  --image /app/portrender/brands/jimmer/character.png \
+  --out   /app/portrender/brands/jimmer/mouths \
+  --mouth-x 0.500 --mouth-y 0.144 --mouth-w 0.044 --cover-scale 1.45 --feather 0.02
+```
+
+Then `clemtock avatar --brand jimmer --text "…"`.
+
+**Honest quality note.** `sprites-from-character.py` paints mouth shapes over a patch of
+sampled skin. The shapes animate correctly and read as speech at normal playback, but the
+cover patch flattens the moustache and lip line, and a viewer looking closely will see it.
+This is a same-day stopgap so a client's character works immediately — **not** the
+finished article. Proper mouth variants are drawn (or generated from the source art with
+portrender's `edit-refine` template once there is OpenAI credit), and that work is exactly
+what the Option A build fee pays for.
+
 ## Renting this out as an API — staged, not now
 
 jimmer wants to resell this as an API for others to generate cartoon/avatar ads.
