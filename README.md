@@ -1,89 +1,197 @@
 # clemtock
 
-Prompt-driven social-media **ad generator**. Feed it images, a short video, and/or image
-"snips" plus a prompt; it writes an ad script, generates missing visuals/footage with AI,
-animates a vertical (9:16) spot, and exports an MP4.
+Makes short vertical videos: **talking cartoon characters** and **social ads**.
 
-Generalized from the `clanimator` "Local 81 Promo" — the hand-authored animation becomes a
-**data-driven** renderer that plays an `ad-script.json`.
+New here? Read [`/app/START-HERE.md`](../START-HERE.md) first — it covers all four tools
+and tells you which one you want.
 
-> Status: **scaffold (Phase 0)**. See [DESIGN.md](DESIGN.md) for the architecture and the
-> validated provider matrix. Unimplemented steps are labeled as stubs, never faked.
+---
 
-## Quickstart
+## The 60-second version
 
 ```bash
-# 0. First time on quasimodo: install ffmpeg/chromium/node + python3-cryptography, npm install, probe.
-bash scripts/quasimodo-setup.sh
-
-# 1. Keys are read from /app/portrender/.env → /app/clemtock/.env → /app/tee-empire/.env
-#    (never written back). Source this only if you want them in your shell too.
-source scripts/load-env.sh
-
-# 2. Confirm every provider authenticates (auth-only, no generation spend).
-scripts/probe-providers.sh
-
-# 3. Turn a brief into an ad-script (real — calls OpenRouter).        [Phase 1]
-python -m clemtock script \
-  --prompt "30s vertical ad for Local 81, gritty union-shop tone, end on GitHub CTA" \
-  --assets uploads/ \
-  --out web/ad-script.json
-
-# 4. Generate any source:gen stills + extract posters from uploaded clips.  [Phase 2]
-python -m clemtock assets --script web/ad-script.json
-
-# 5. Preview / scrub in the browser (open web/clemtock-renderer.dc.html), then
-#    render the spot straight to an MP4 on disk.                       [Phase 4]
-python -m clemtock export --script web/ad-script.json --out out/clemtock-ad.mp4
+cd /app/clemtock/backend
+python3 -m clemtock avatar --brand earl_biggers --text "Well howdy. Gone fishin, dammit." --out ../out/earl.mp4
 ```
 
-`export` drives the renderer in headless chromium (via playwright-core + system chromium)
-and pipes frames through ffmpeg — no browser download dialog, the file lands in `out/`.
+That makes a 1080×1920 video of a cartoon character speaking that line. **It costs
+nothing**, needs no API key, and works with the internet unplugged.
+
+It is slow — about 8–15× the length of the audio, so a 10-second line takes 1–3 minutes.
+That is expected, not a hang.
+
+---
+
+## What it can do
+
+| | Command | Cost | Needs |
+|---|---|---|---|
+| Talking cartoon character | `avatar --brand <slug>` | **free** | nothing (all local) |
+| Talking photoreal human | `avatar --provider heygen` | ~$0.50+/video | HeyGen key |
+| Write an ad script | `script --prompt "…"` | **free** | nothing (local model) |
+| Check what's working | `probe` | free | nothing |
+| Render an ad to MP4 | `export --script …` | free | node + chromium |
+
+---
+
+## Talking cartoon characters
+
+### How it works
+
+Three free tools in a row. Nothing here needs a graphics card:
+
+```
+your text ─► Chatterbox ─► speech.wav ─► Rhubarb ─► which mouth, when ─► ffmpeg ─► video
+              (voice)                    (lip sync)                      (assembly)
+```
+
+A cartoon mouth is just a handful of drawings. Lip-sync means picking which drawing is on
+screen at each moment — a solved problem, instant on a CPU. That is why this is free while
+services like HeyGen charge per video.
+
+### Setting up a character
+
+Each brand needs its mouth drawings in `/app/portrender/brands/<brand>/mouths/`:
+
+| File | Mouth shape | Used for |
+|---|---|---|
+| `A.png` | closed | M, B, P |
+| `B.png` | barely open | most consonants |
+| `C.png` | open | E |
+| `D.png` | wide open | "aa", AI |
+| `E.png` | small round | O |
+| `F.png` | puckered | U, W |
+| `G.png` *(optional)* | teeth on lip | F, V |
+| `H.png` *(optional)* | tongue up | L |
+| `X.png` *(optional)* | resting | silence |
+
+**Six files (A–F) is enough.** Missing shapes fall back to the nearest one automatically.
+
+To get a working placeholder set in one command:
+
+```bash
+python3 /app/clemtock/scripts/make-sprite-set.py --out /app/portrender/brands/<brand>/mouths
+```
+
+That draws a bearded smiley so you can watch the pipeline work. Then replace the files one
+at a time with real art — same names, any size. Nothing else needs changing.
+
+Real art comes from portrender's `mascot-sheet` template. Keep every mouth identical
+except the mouth itself, or the character will appear to twitch.
+
+> Mouth art lives in portrender's brand folder because it belongs with the prompts that
+> drew it. Those folders are **gitignored** — brand art is private, and portrender's repo
+> is public.
+
+### Cloning a voice
+
+```bash
+python3 -m clemtock avatar --brand earl_biggers --text "..." --voice-ref path/to/sample.wav
+```
+
+Five seconds of clean speech is enough. **Only clone a voice with that person's explicit
+permission**, and keep the permission on file next to the sample — a WAV does not carry
+consent with it.
+
+### Useful options
+
+```
+--background FILE   a backdrop image behind the character
+--bg-color '#123'   fill colour when there is no backdrop
+--width / --height  default 1080×1920 (vertical). Use 1920 1080 for landscape.
+--fps               default 30
+--keep-workdir      keep the generated speech.wav and the mouth timings, to inspect
+--sprites DIR       use a specific folder instead of --brand
+```
+
+---
+
+## Writing ad scripts
+
+```bash
+python3 -m clemtock script --prompt "15 second vertical ad for a fishing tee" \
+  --duration 15 --out ../out/ad-script.json
+```
+
+Produces a structured scene list (timings, on-screen copy, colours, which images go where).
+
+By default this runs a language model **on this laptop** — free, private, offline. It is
+noticeably weaker at copywriting than Claude. For anything you will actually publish, have
+Claude write the script; use the local one for bulk and unattended runs.
+
+```bash
+CLEMTOCK_SCRIPT_PROVIDER=ollama     python3 -m clemtock script ...   # force local
+CLEMTOCK_SCRIPT_PROVIDER=openrouter python3 -m clemtock script ...   # force the paid API
+```
+
+---
+
+## Setup
+
+Most of this is already installed. To do it on a fresh machine:
+
+```bash
+bash scripts/setup-avatar-chain.sh --check   # what is missing
+bash scripts/setup-avatar-chain.sh           # install it (~3 GB, mostly one-time)
+```
+
+Then confirm:
+
+```bash
+bash scripts/probe-providers.sh
+```
+
+`OK` is good. `SKIP` means that key is absent and that one feature is unavailable —
+everything else still works.
+
+### Keys
+
+Read automatically, in order, from `/app/portrender/.env` → `./.env` →
+`/app/tee-empire/.env`. Never written back. One key on the machine serves every tool.
+
+| Key | Unlocks | Needed for cartoons? |
+|---|---|---|
+| `OPENAI_API_KEY` | AI still images | no |
+| `OPENROUTER_API_KEY` | cloud ad-script writer | no — local model covers it |
+| `HEYGEN_API_KEY` | photoreal presenters | no |
+| `KIEAI_API_KEY` | AI video clips | no |
+| `POST_BRIDGE_API_KEY` | posting to social | no |
+| `VAST_API_KEY` | rented GPU for b-roll | no |
+
+**The whole cartoon avatar pipeline needs none of them.**
+
+---
+
+## Running the studio UI
+
+```bash
+bash scripts/serve.sh start      # http://127.0.0.1:3053
+bash scripts/serve.sh status     # is it up?
+bash scripts/serve.sh stop
+```
+
+---
 
 ## Layout
 
 ```
-clemtock/
-  DESIGN.md                      architecture, schema, phases, provider matrix
-  schema/ad-script.schema.json   the ad-script contract
-  scripts/
-    load-env.sh                  export keys from the .env files (no ssh, nothing written)
-    probe-providers.sh           auth-only health check for every provider + local toolchain
-    quasimodo-setup.sh           one-shot host setup (apt packages, npm install, probe)
-    serve.sh                     start/stop the studio server (0.0.0.0:3053)
-    install-user-service.sh      systemd user unit for the studio (survives logout with linger)
-  backend/clemtock/              stdlib-first Python package
-    config.py                    provider config from env (no secrets at rest)
-    providers/                   ScriptProvider / Image / Video / Avatar interfaces + impls
-    cli.py                       `python -m clemtock <script|assets|render|export|run>`
-  web/
-    support.js                   DC runtime (from clanimator)
-    clemtock-renderer.dc.html    data-driven renderer: plays ad-script.json
-    templates.js                 scene template library (title/photo/video/terminal/cta)
-    render-mp4.html              offline MP4 exporter (generalized)
-    ad-script.json               example script (renders out of the box)
-  uploads/                       your input media (gitignored)
-  out/                           generated assets + MP4s (gitignored)
+backend/clemtock/providers/   one file per external service; all swappable
+  cartoon_avatar.py           the free talking-character pipeline
+  chatterbox_voice.py         text -> speech (+ voice cloning)
+  rhubarb_lipsync.py          speech -> mouth timings
+  heygen.py                   paid photoreal presenter
+  ollama_script.py            local ad-script writer
+  vast_gpu.py                 rents a GPU by the hour, gives it back
+assets/                       character art and backdrops
+themes/                       per-brand look for ads
+scripts/                      setup, health checks, start/stop
+tests/                        run: python3 -m unittest discover -s tests -t .
+vendor/                       downloaded tools (not in git)
 ```
 
-## Secrets
+## More detail
 
-clemtock **never stores keys** in the repo. It reads them at runtime from, in order:
-
-- `/app/portrender/.env` — `OPENAI_API_KEY` (shared with portrender; gpt-image-2 stills)
-- `/app/clemtock/.env` — `KIEAI_API_KEY`, `HEYGEN_API_KEY`, `HEYGEN_VOICE_CLONE_ID`,
-  `HEYGEN_CARTOON_AVATAR_ID`, `XAI_API_KEY`, `POST_BRIDGE_API_KEY`, `OPENROUTER_API_KEY` (gitignored; chmod 600)
-- `/app/tee-empire/.env` — `OPENROUTER_API_KEY`, Printify (when tee-empire is cloned on this host)
-- the encrypted vault (`clemtock vault …`, needs `python3-cryptography`) — optional
-
-`config.load_env_files()` does this for the CLI and the studio server; `scripts/load-env.sh`
-does the same for an interactive shell. Override the list with `CLEMTOCK_ENV_FILES=a:b:c`.
-
-## Where it runs
-
-**quasimodo**, `/app/clemtock` (user `jimbro`). ffmpeg, chromium, node and every provider call are
-local to that host; there is no remote render host. pop-os pushes code with
-`local81 deploy --scope clemtock` (excludes `out/`, `uploads/`, `.vault/`, `node_modules/`, `.env`),
-and the post-deploy hook restarts the studio. Studio: **http://192.168.0.20:3053**
-(`scripts/serve.sh start` or `scripts/install-user-service.sh`). portrender on the same host
-drops approved art into `assets/<category>/` and calls `POST /api/rescan`.
+- [`docs/render-pipeline.md`](docs/render-pipeline.md) — architecture, real measured speeds
+  and costs, and the staged plan for reselling this as an API
+- [`DESIGN.md`](DESIGN.md) — original design notes
+- [`/app/START-HERE.md`](../START-HERE.md) — all four tools in one page

@@ -31,6 +31,21 @@ from . import rhubarb_lipsync as rhubarb
 from .base import AvatarProvider, ProviderUnavailable
 from .chatterbox_voice import ChatterboxVoice
 
+# PR-10, answered 2026-09-23: mouth sprite sets live in portrender's brand tree,
+# "versioned next to the prompts, now private" — portrender/brands/<slug>/mouths/.
+# That directory is gitignored in portrender (PR-5), so the art never goes public.
+PORTRENDER_BRANDS = Path(os.environ.get("PORTRENDER_BRANDS_DIR", "/app/portrender/brands"))
+
+
+def brand_mouths(slug: str) -> Path:
+    """Sprite directory for a brand. Raises with the path if the art is not there yet."""
+    d = PORTRENDER_BRANDS / slug / "mouths"
+    if not d.is_dir():
+        raise ProviderUnavailable(
+            f"no mouth sprites for brand {slug!r}: expected {d}. "
+            f"Draw them with portrender's mascot-sheet template, or pass --sprites.")
+    return d
+
 
 def _ffmpeg() -> str:
     exe = shutil.which(os.environ.get("FFMPEG_BIN", "ffmpeg"))

@@ -1,0 +1,23 @@
+{
+  "name": "icenstone",
+  "label": "Ice and Stone",
+  "ref": "https://icenstone.grok.me",
+  "location": "Traverse City, MI",
+  "palette": {
+    "ink": "#e9eef2",
+    "cream": "#4a5560",
+    "text": "#4a5560",
+    "muted": "#cbe0db",
+    "lime": "#0b1018",
+    "orange": "#7fc8e8",
+    "line": "#234a52",
+    "line2": "#2c5a62"
+  },
+  "style_prompt": "Bold vintage cartoon sticker style, thick outlines, bright flat colors. Palette: #0b1018, #e9eef2, #4a5560, #7fc8e8. defiant, hardscrabble, cold-forged; terse declaratives, no cute puns; Michigan-vs-all-y'all underdog pride without naming any existing 'vs everybody' brand No text.",
+  "backdrop_prompt": "Soft blurred vertical brand background in #0b1018/#e9eef2 tones with subtle motifs, warm glow, vignette, muted, no text. Ice and Stone look.",
+  "mascots": {},
+  "audiences": {
+    "primary": "Northern Michiganders and Yoopers \u2014 residents, seasonal returners, expats who still say 'up north'"
+  },
+  "qr_target": "https://icenstone.grok.me"
+}

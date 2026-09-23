@@ -1,0 +1,25 @@
+{
+  "name": "au2",
+  "label": "Appearance Unlimited",
+  "ref": "https://appearance-unlimited.com",
+  "location": "Traverse City, MI",
+  "palette": {
+    "ink": "#d81a24",
+    "cream": "#f4f4f6",
+    "text": "#f4f4f6",
+    "muted": "#cbe0db",
+    "lime": "#b8121b",
+    "orange": "#7d0d13",
+    "line": "#234a52",
+    "line2": "#2c5a62"
+  },
+  "style_prompt": "Bold vintage cartoon sticker style, thick outlines, bright flat colors. Palette: #b8121b, #d81a24, #f4f4f6, #7d0d13. shop-floor honest, dry humor, motorsport swagger; the crew, the calipers, the panel gaps you could set a watch to No text.",
+  "backdrop_prompt": "Soft blurred vertical brand background in #b8121b/#d81a24 tones with subtle motifs, warm glow, vignette, muted, no text. Appearance Unlimited look.",
+  "mascots": {
+    "the crew": "no single mascot; recurring motifs are the AU car logo, calipers, the SS, a packed cooler and an open toolbox"
+  },
+  "audiences": {
+    "primary": "gearheads, restoration customers, Northern Michigan car-show crowd"
+  },
+  "qr_target": "https://appearance-unlimited.com"
+}

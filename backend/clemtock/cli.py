@@ -115,8 +115,15 @@ def _avatar_cartoon(args: argparse.Namespace) -> int:
     from .providers.cartoon_avatar import CartoonAvatarProvider
     import time
 
+    from .providers.cartoon_avatar import brand_mouths
+    try:
+        sprites = Path(args.sprites) if args.sprites else brand_mouths(args.brand)
+    except ProviderUnavailable as e:
+        print(f"clemtock avatar: {e}", file=sys.stderr)
+        return 2
+
     prov = CartoonAvatarProvider(
-        sprites_dir=Path(args.sprites),
+        sprites_dir=sprites,
         voice_ref=Path(args.voice_ref) if args.voice_ref else None,
         background=Path(args.background) if args.background else None,
         width=args.width, height=args.height, fps=args.fps,
@@ -205,9 +212,9 @@ def cmd_avatar(args: argparse.Namespace) -> int:
     cartoon avatars at all.
     """
     if args.provider == "cartoon":
-        if not args.sprites:
-            print("clemtock avatar: --sprites is required for the cartoon provider",
-                  file=sys.stderr)
+        if not args.sprites and not args.brand:
+            print("clemtock avatar: give --brand <slug> (uses portrender/brands/<slug>/mouths)"
+                  " or --sprites <dir>", file=sys.stderr)
             return 2
         return _avatar_cartoon(args)
     return _avatar_heygen(args)
@@ -510,8 +517,10 @@ def build_parser() -> argparse.ArgumentParser:
                     help="cartoon = Chatterbox+Rhubarb+ffmpeg on this host, no cost (default)")
     av.add_argument("--out", default=str(_REPO / "out" / "clem-avatar.mp4"))
     # --- cartoon ---
+    av.add_argument("--brand", default=None,
+                    help="[cartoon] brand slug — uses portrender/brands/<slug>/mouths (private art)")
     av.add_argument("--sprites", default=None,
-                    help="[cartoon] mouth sprite dir: A.png … F.png (G/H/X optional)")
+                    help="[cartoon] explicit mouth sprite dir, overriding --brand")
     av.add_argument("--voice-ref", dest="voice_ref", default=None,
                     help="[cartoon] WAV to clone the voice from (~5s). Consent must be on record.")
     av.add_argument("--background", default=None, help="[cartoon] backdrop behind the mascot")
