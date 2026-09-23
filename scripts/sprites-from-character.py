@@ -27,6 +27,7 @@ stylised art exactly when you need it, and a wrong box is worse than one you set
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
@@ -217,6 +218,17 @@ def main() -> int:
     for letter in SHAPES:
         draw(img, out_dir / f"{letter}.png", cx=cx, cy=cy, mw=mw, letter=letter,
              fill=args.fill, stroke=args.stroke, feather=args.feather, cover=cover)
+    # Record the geometry next to the character. The HeyGen path needs a head crop and
+    # the mouth position is the only reliable anchor we have for finding one.
+    cfg = img.parent / "character.json"
+    cfg.write_text(json.dumps({
+        "image": img.name,
+        "width": w, "height": h,
+        "mouth_x": args.mouth_x, "mouth_y": args.mouth_y, "mouth_w": args.mouth_w,
+        "cover_scale": args.cover_scale, "feather": args.feather,
+    }, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {cfg}")
+
     print(f"wrote {len(SHAPES)} sprites to {out_dir}  (from {img.name}, {w}x{h})"
           + (f"  cover={cover[0]}" if cover else "  cover=none"))
     print(f"test it:  python3 -m clemtock avatar --sprites {out_dir} --text \"howdy\" --out /tmp/test.mp4")

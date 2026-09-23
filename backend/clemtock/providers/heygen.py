@@ -21,6 +21,11 @@ from .base import AvatarProvider, ProviderUnavailable
 _GENERATE = "https://api.heygen.com/v2/video/generate"
 _STATUS = "https://api.heygen.com/v1/video_status.get"
 _ME = "https://api.heygen.com/v3/users/me"
+_UPLOAD_TALKING_PHOTO = "https://upload.heygen.com/v1/talking_photo"
+
+# NOTE (verified 2026-09-23): /v2/video/generate returns a Legacy warning naming a
+# **2026-10-31 sunset** and pointing at the v3 API. Not just the quota endpoint — the
+# generate call itself. Migrate to POST /v3/videos before then or this stops working.
 
 # The account has auto-reload enabled ($75 recharged whenever the wallet drops below
 # $5), and HeyGen exposes no API to change that — it is dashboard-only. So the wallet
@@ -33,6 +38,7 @@ class HeyGenAvatarProvider(AvatarProvider):
     name = "heygen"
 
     def __init__(self, api_key: str, avatar_id: str = "", voice_id: str = "",
+                 talking_photo_id: str = "",
                  width: int = 720, height: int = 1280,
                  poll_timeout: int = 600, poll_every: int = 8):
         if not api_key:
@@ -40,6 +46,7 @@ class HeyGenAvatarProvider(AvatarProvider):
         self.api_key = api_key
         self.avatar_id = avatar_id
         self.voice_id = voice_id
+        self.talking_photo_id = talking_photo_id or os.environ.get("HEYGEN_TALKING_PHOTO_ID", "")
         self.width, self.height = width, height
         self.poll_timeout = poll_timeout
         self.poll_every = poll_every
@@ -74,16 +81,52 @@ class HeyGenAvatarProvider(AvatarProvider):
                 f"Raise HEYGEN_MIN_BALANCE_USD deliberately, or top up by hand.")
         return bal
 
+    def upload_talking_photo(self, image: Path) -> str:
+        """Upload a character picture and get an id you can drive with speech.
+
+        This is the path that matters for cartoon brands: HeyGen's 1,264 stock avatars
+        are all photoreal presenters, so the only way to animate *your* character is to
+        hand it one. Works on illustrated art — verified on a 768x768 portrait crop.
+
+        Feed it a head-and-shoulders crop on a solid background, not a full-body figure:
+        it is a face model, and a face occupying a sixth of the frame gives it little to
+        work with.
+        """
+        image = Path(image)
+        if not image.is_file():
+            raise ProviderUnavailable(f"no such image: {image}")
+        data = image.read_bytes()
+        ctype = "image/jpeg" if image.suffix.lower() in (".jpg", ".jpeg") else "image/png"
+        req = urllib.request.Request(_UPLOAD_TALKING_PHOTO, data=data, method="POST",
+                                     headers={"X-Api-Key": self.api_key, "Content-Type": ctype})
+        try:
+            with urllib.request.urlopen(req, timeout=300) as r:
+                resp = json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            raise ProviderUnavailable(
+                f"HeyGen upload HTTP {e.code}: {e.read().decode('utf-8','replace')[:300]}") from e
+        tp = (resp.get("data") or {}).get("talking_photo_id")
+        if not tp:
+            raise ProviderUnavailable(f"HeyGen upload returned no id: {json.dumps(resp)[:300]}")
+        return tp
+
     def generate(self, text: str, out: Path, *, avatar_id: str | None = None,
-                 voice_id: str | None = None) -> Path:
+                 voice_id: str | None = None, talking_photo_id: str | None = None) -> Path:
         self.check_budget()
-        avatar = avatar_id or self.avatar_id
         voice = voice_id or self.voice_id
-        if not avatar:
-            raise ProviderUnavailable("HeyGen needs an avatar_id (HEYGEN_CARTOON_AVATAR_ID)")
+        tp = talking_photo_id or self.talking_photo_id
+        avatar = avatar_id or self.avatar_id
+        if tp:
+            character = {"type": "talking_photo", "talking_photo_id": tp}
+        elif avatar:
+            character = {"type": "avatar", "avatar_id": avatar, "avatar_style": "normal"}
+        else:
+            raise ProviderUnavailable(
+                "HeyGen needs either a talking_photo_id (your own character) or an "
+                "avatar_id (a stock presenter)")
         resp = self._req(_GENERATE, {
             "video_inputs": [{
-                "character": {"type": "avatar", "avatar_id": avatar, "avatar_style": "normal"},
+                "character": character,
                 "voice": {"type": "text", "input_text": text, "voice_id": voice},
             }],
             "dimension": {"width": self.width, "height": self.height},

@@ -145,6 +145,67 @@ finished article. Proper mouth variants are drawn (or generated from the source 
 portrender's `edit-refine` template once there is OpenAI credit), and that work is exactly
 what the Option A build fee pays for.
 
+## Two avatar paths, and when to use which
+
+Measured 2026-09-23 on the jimmer character.
+
+| | **HeyGen talking photo** | **Local sprite chain** |
+|---|---|---|
+| Quality | professional — real lip shapes, teeth, jaw and beard moving with speech | crude; a mouth shape swapped on a patch of skin |
+| Cost | **~$0.019 per second** ($0.10 for 5.3 s, observed on the wallet) | $0.00 |
+| Speed | ~63 s per clip, on their GPUs | 8-15x realtime on pop-os CPU |
+| Needs | HeyGen key + credit | nothing |
+| Command | `clemtock avatar --provider heygen --brand <slug>` | `clemtock avatar --brand <slug>` |
+
+**For paying client work, HeyGen is the default.** At $0.019/s a 30-second ad costs about
+$0.57. Against a $299-799/mo retainer that is a rounding error — twelve 30-second videos a
+month is under $7 of cost, a ~97% margin. The earlier "keep HeyGen for the occasional
+premium spot" position was written before the price was measured, and the measurement
+overturns it.
+
+The local chain keeps its place: bulk drafts, offline work, and anything where a client is
+iterating on wording and does not need finished quality yet.
+
+### Why we are NOT building GPU lip-sync on the rented 4090 (yet)
+
+LatentSync (Apache-2.0) and MuseTalk (MIT) would run on the vast.ai 4090 and cost ~$0.02
+per clip instead of HeyGen's ~$0.57 for 30 s. That is a real saving *per unit* and an
+unreal one in total: at plausible retainer volumes it saves single-digit dollars a month,
+against building and maintaining a ComfyUI/model pipeline on a rented box. That is exactly
+the premature optimisation fleet rule 2 exists to prevent.
+
+Revisit when any of these is true:
+- monthly HeyGen spend passes roughly $50 (~85 thirty-second videos)
+- a client needs offline or on-premise rendering
+- the v2 sunset below forces a rewrite anyway
+
+### Deadline: the HeyGen endpoints we use retire 2026-10-31
+
+`/v2/video/generate` returns a Legacy warning naming **2026-10-31**, and points at the v3
+API (`POST /v3/videos`). `/v1/video_status.get` is the same generation. This is ~5 weeks
+out and it is not optional — migrate `providers/heygen.py` to v3 before then.
+
+## Character asset gotchas (both hit the jimmer file)
+
+1. **A baked-in transparency checkerboard.** `jimmer-standing.png` arrived with *no alpha
+   channel* and the grey/white checker painted into the pixels — an export that captured
+   the editor's transparency grid. It is invisible until you composite, then it is in every
+   frame. Fix, keeping the character's own whites intact by flooding only from the border:
+
+   ```bash
+   convert in.png -alpha set -channel rgba -fuzz 20% -fill none \
+     -draw "matte 1,1 floodfill"    -draw "matte 1022,1 floodfill" \
+     -draw "matte 1,1534 floodfill" -draw "matte 1022,1534 floodfill" \
+     +channel out.png
+   ```
+   Check the result with `-alpha extract`: the opaque fraction should look like a figure
+   (~38% here), not ~100%.
+
+2. **A typo in the artwork.** The shirt read "APPEARNCE". Patched by cloning the 'A' glyph
+   from earlier in the same wordmark and shifting "NCE" right. It reads correctly now but
+   leaves a faint seam at the join — a gradient logotype cannot be repaired convincingly in
+   raster. **Fix it in the source vector file.**
+
 ## Renting this out as an API — staged, not now
 
 jimmer wants to resell this as an API for others to generate cartoon/avatar ads.

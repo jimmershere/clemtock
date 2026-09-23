@@ -211,6 +211,11 @@ def cmd_avatar(args: argparse.Namespace) -> int:
     occasional premium spot, but it bills per video and its stock library has no
     cartoon avatars at all.
     """
+    if args.provider == "heygen" and not (args.brand or args.avatar_id
+                                          or os.environ.get("HEYGEN_TALKING_PHOTO_ID")):
+        print("clemtock avatar: heygen needs --brand <slug> (your character) or "
+              "--avatar-id <stock presenter>", file=sys.stderr)
+        return 2
     if args.provider == "cartoon":
         if not args.sprites and not args.brand:
             print("clemtock avatar: give --brand <slug> (uses portrender/brands/<slug>/mouths)"
@@ -221,15 +226,31 @@ def cmd_avatar(args: argparse.Namespace) -> int:
 
 
 def _avatar_heygen(args: argparse.Namespace) -> int:
-    """HeyGen talking-avatar segment (Phase 5)."""
+    """HeyGen. With --brand, drives YOUR character rather than a stock presenter."""
     from .providers.heygen import HeyGenAvatarProvider
+    from .providers import heygen_character
+    import time
     cfg = Config.from_env()
     try:
         prov = HeyGenAvatarProvider(cfg.heygen_key, avatar_id=cfg.heygen_avatar_id,
-                                    voice_id=cfg.heygen_voice_id)
-        print("clemtock avatar: submitting to HeyGen; this takes a few minutes…", file=sys.stderr)
+                                    voice_id=cfg.heygen_voice_id,
+                                    width=args.width, height=args.height)
+        tp = None
+        if args.brand:
+            tp = heygen_character.talking_photo_id(prov, args.brand,
+                                                   refresh=args.refresh_photo)
+            print(f"clemtock avatar: brand {args.brand} -> talking_photo {tp[:12]}…",
+                  file=sys.stderr)
+        before = prov.balance()
+        print("clemtock avatar: submitting to HeyGen; this takes a minute or two…",
+              file=sys.stderr)
+        t0 = time.time()
         out = prov.generate(args.text, Path(args.out),
-                           avatar_id=args.avatar_id, voice_id=args.voice_id)
+                            avatar_id=args.avatar_id, voice_id=args.voice_id,
+                            talking_photo_id=tp)
+        spent = before - prov.balance()
+        print(f"clemtock avatar: HeyGen took {time.time()-t0:.0f}s, "
+              f"spent ${spent:.2f} (wallet ${prov.balance():.2f})", file=sys.stderr)
     except ProviderUnavailable as e:
         print(f"clemtock avatar: {e}", file=sys.stderr)
         return 2
@@ -532,8 +553,12 @@ def build_parser() -> argparse.ArgumentParser:
     av.add_argument("--keep-workdir", dest="keep_workdir", action="store_true",
                     help="[cartoon] keep voice.wav + the cue list for inspection")
     # --- heygen ---
-    av.add_argument("--avatar-id", dest="avatar_id", default=None, help="[heygen]")
-    av.add_argument("--voice-id", dest="voice_id", default=None, help="[heygen]")
+    av.add_argument("--avatar-id", dest="avatar_id", default=None,
+                    help="[heygen] a stock presenter; ignored when --brand is given")
+    av.add_argument("--voice-id", dest="voice_id", default=None,
+                    help="[heygen] voice id (HEYGEN_VOICE_CLONE_ID is the default)")
+    av.add_argument("--refresh-photo", action="store_true",
+                    help="[heygen] re-upload the character even if an id is cached")
     av.set_defaults(func=cmd_avatar)
 
     comp = sub.add_parser("compose", help="composite real clips + audio under graphics (Phase 6)")
