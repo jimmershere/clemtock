@@ -90,6 +90,14 @@ instance is visible rather than discovered on the invoice.
 At ~$0.40/hr, 250 GPU-hours of credit, and a few minutes of GPU per b-roll clip,
 the marginal cost of a cartoon ad is **cents** — and zero if it needs no b-roll.
 
+**The binding constraint is throughput, not money.** Chatterbox at 8-15x realtime on
+pop-os caps one laptop at roughly 380 fifteen-second ads/day, 190 at thirty seconds,
+96 at sixty — halve those for a machine also doing other work, with 1-2 concurrent
+slots. That is ample for dozens of retainer clients and nowhere near enough for an
+open self-serve API, which is the single strongest argument for the retainer model in
+issue #8. Whether a rented GPU lifts TTS throughput materially is **untested** —
+measure before promising anyone a turnaround time.
+
 ## Renting this out as an API — staged, not now
 
 jimmer wants to resell this as an API for others to generate cartoon/avatar ads.
@@ -146,7 +154,7 @@ Worth knowing now even though it is not being built:
 | PR-14 | HeyGen has **zero cartoon avatars** in its 1,264-avatar stock library — all photoreal presenters. Cartoon requires the talking-photo upload path (a payload branch `heygen.py` does not have). Is HeyGen worth it for a cartoon product at all? |
 | PR-10 | Where does the mascot mouth-sprite set live — portrender `brands/<slug>/` (and is that OK for a public repo, cf. PR-5) or clemtock `assets/`? |
 | ~~PR-11~~ | **ANSWERED 2026-09-23 — keep it.** "we still want the cinematic b-roll via Wan 2.2 on a rented 4090 included in this version." So the rented GPU is part of v1, not a later option, and `comfy_video.py` is in scope. Ken-Burns over stills stays available as the cheap fallback, not the plan. |
-| PR-12 | Resale pricing — unanswerable until `cost.json` has real numbers (stage 2). |
+| PR-12 | **Researched 2026-09-23** → [issue #8](https://github.com/jimmershere/portrender/issues/8). The market has two anchors ~100x apart: commodity AI video SaaS ($19-149/mo, generic photoreal heads) and custom mascot animation ($5-25k **per minute**; median 60s explainer **$9,680**; mascot build + 3 videos year one **$20-28k**). We sit in the unoccupied middle — *your* character, in minutes. Recommendation: **mascot-as-a-service retainer** (build fee $500-1.5k, then $299-799/mo), because it is the only option compatible with fleet rule 2 today and the one the data supports. Still open: are we selling to local businesses or to other builders? |
 
 ## Rented-GPU lifecycle — verified live 2026-09-23
 
