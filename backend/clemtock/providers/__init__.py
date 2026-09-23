@@ -11,8 +11,14 @@ from .base import (
     AvatarProvider,
 )
 
+from .ollama_script import OllamaScriptProvider
+from .vast_gpu import VastGPU, VastError
+
 __all__ = [
     "ProviderUnavailable",
+    "OllamaScriptProvider",
+    "VastGPU",
+    "VastError",
     "ScriptProvider",
     "ImageProvider",
     "VideoProvider",

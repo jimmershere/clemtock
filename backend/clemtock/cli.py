@@ -17,6 +17,7 @@ from . import vault as vault_mod
 from .config import Config
 from .providers import ProviderUnavailable
 from .providers.openrouter import OpenRouterScriptProvider
+from .providers.ollama_script import OllamaScriptProvider
 
 _IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 _VIDEO_EXT = {".mp4", ".mov", ".webm", ".m4v"}
@@ -57,11 +58,37 @@ def cmd_probe(args: argparse.Namespace) -> int:
     return subprocess.call(["bash", str(script)])
 
 
+def _pick_script_provider(cfg: Config):
+    """Choose the ad-script brain.
+
+    CLEMTOCK_SCRIPT_PROVIDER pins it explicitly; "auto" prefers OpenRouter when a key is
+    present (better copy) and falls back to local ollama, so a missing key degrades to
+    free-and-slower instead of failing outright.
+    """
+    want = (cfg.script_provider or "auto").lower()
+    if want == "ollama":
+        return OllamaScriptProvider(model=cfg.ollama_model, host=cfg.ollama_host)
+    if want == "openrouter":
+        return OpenRouterScriptProvider(cfg.openrouter_key, model=cfg.script_model)
+    if want != "auto":
+        raise ProviderUnavailable(
+            f"CLEMTOCK_SCRIPT_PROVIDER={want!r} is not one of: auto, ollama, openrouter")
+    if cfg.openrouter_key:
+        return OpenRouterScriptProvider(cfg.openrouter_key, model=cfg.script_model)
+    local = OllamaScriptProvider(model=cfg.ollama_model, host=cfg.ollama_host)
+    if local.available():
+        return local
+    raise ProviderUnavailable(
+        "no script brain: OPENROUTER_API_KEY is unset and ollama has no "
+        f"{cfg.ollama_model!r} at {local.host} (pull it with `ollama pull {cfg.ollama_model}`)")
+
+
 def cmd_script(args: argparse.Namespace) -> int:
     cfg = Config.from_env()
     assets = _manifest(Path(args.assets)) if args.assets else {}
     try:
-        provider = OpenRouterScriptProvider(cfg.openrouter_key, model=cfg.script_model)
+        provider = _pick_script_provider(cfg)
+        print(f"clemtock script: brain = {provider.name}", file=sys.stderr)
         script = provider.generate(args.prompt, assets, float(args.duration))
     except ProviderUnavailable as e:
         print(f"clemtock script: {e}", file=sys.stderr)
@@ -519,6 +546,8 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     # transparently unlock vault secrets into env for everything except vault admin itself
     if args.command != "vault":
+        from .config import load_env_files
+        load_env_files()          # /app/portrender/.env, ./.env, /app/tee-empire/.env (no override)
         vault_mod.apply_to_env()
     return args.func(args)
 
