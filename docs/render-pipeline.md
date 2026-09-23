@@ -154,6 +154,12 @@ Built and verified 2026-09-23:
   `destroy_all` panic button. **Read paths verified live**; `rent`/`destroy`
   are dry-run by default and have **not** been exercised against real billing.
 
+Verified live on pop-os: ollama v0.34.3 + `qwen3:8b` generating a full 15s ad
+script in ~60-85s with no API key and no cost. `think: False` is essential —
+without it qwen3 spends its whole budget reasoning and never finishes on CPU.
+
 Not built yet: Chatterbox TTS provider, Rhubarb integration, the compositor, the
-job queue. Chatterbox is blocked on pop-os having no `pip`/`ensurepip`
-(`sudo apt install python3.12-venv` — needs jimmer's password).
+job queue. **No longer blocked** — `python3.12-venv` and `imagemagick` are
+installed and `ensurepip` works, so a venv for Chatterbox can be built. The next
+concrete step is `providers/chatterbox_voice.py` + a Rhubarb wrapper, then the
+ffmpeg compositor against the 15 mascot assets already in `assets/`.
