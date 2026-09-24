@@ -179,6 +179,39 @@ Revisit when any of these is true:
 - a client needs offline or on-premise rendering
 - the v2 sunset below forces a rewrite anyway
 
+### The 3-character limit is a PLAN limit, not a product one
+
+Hit on 2026-09-24: `You have exceeded your limit of 3 photo avatars`. It looks like a
+hard ceiling on how many customers this model can serve. It is not.
+
+- **Free / wallet-only: 3 photo avatars.** *(web)*
+- **Creator ($29/mo), Team, Enterprise: unlimited photo avatars.** *(web)*
+
+The account reports `billing_type: wallet` — pay-as-you-go API credits with **no
+subscription** — so free-tier feature caps apply despite a $98 balance. Credit and plan
+are separate things on HeyGen and buying more credit does not lift this.
+
+**So the fix is a $29/mo subscription**, against retainers of $299-799/mo per client.
+It is noise, and it removes the ceiling entirely. Do that before onboarding a third
+character.
+
+Two things worth keeping straight:
+
+- The quota counts avatar **groups**, not characters and not talking photos. Deleting a
+  talking photo returns 200 and leaves its group behind still consuming a slot — which is
+  why clearing photos appeared to do nothing. `heygen_character.delete_group()` is the
+  one that actually frees capacity.
+- "Unlimited photo avatars" is not "unlimited instant avatars". *Instant avatars* /
+  digital twins (built from video) stay capped — 5 on Business, 10+ on Enterprise *(web)*.
+  We use **photo avatars** (a still driven by speech), which is the unlimited one.
+
+**Fallback if a subscription is unwanted: rotate.** Uploading is free and takes seconds,
+so the pipeline can delete-then-upload per render, turning 3 into a *concurrency* limit
+rather than a *customer* limit. The primitive is implemented and verified
+(`talking_photo_id(..., refresh=True)` released a group and uploaded a replacement with
+the count unchanged). It is strictly worse than paying $29 — it adds seconds per render
+and a crashed render leaks a slot — so treat it as a fallback, not the plan.
+
 ### Deadline: the HeyGen endpoints we use retire 2026-10-31
 
 `/v2/video/generate` returns a Legacy warning naming **2026-10-31**, and points at the v3
