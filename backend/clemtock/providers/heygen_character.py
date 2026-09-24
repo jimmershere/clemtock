@@ -12,9 +12,15 @@ This module owns the two fiddly parts:
    `character.json` by `sprites-from-character.py`, and flatten the transparency —
    a PNG alpha channel is not a background.
 
-2. **The cache.** Every upload creates a new photo avatar server-side, so re-uploading
-   the same character on every render litters the account. The id is cached in
-   `brands/<slug>/heygen.json` and reused until the source image changes.
+2. **The cache, and cleaning up after it.** Every upload creates a new photo avatar
+   *group*, and the plan caps those at **3** — not at 3 characters, at 3 groups. Caching
+   the id in `brands/<slug>/heygen.json` stops us re-uploading on every render, but each
+   time the artwork legitimately changes we burn another slot.
+
+   Worse, the two are separate resources: deleting the talking photo leaves the group
+   behind, still counting against the quota. Three edits to one character filled the
+   account and blocked a second character entirely (2026-09-24). So on refresh we now
+   delete the **group** the previous id belonged to.
 
 Quality note, measured: this produces genuinely professional lip-sync — real lip shapes,
 visible teeth, jaw and beard moving with the speech — at **~$0.019 per second of video**
@@ -99,6 +105,20 @@ def _fingerprint(img: Path) -> str:
     return hashlib.sha256(img.read_bytes()).hexdigest()[:16]
 
 
+def delete_group(provider, group_id: str) -> bool:
+    """Release a photo-avatar group. Quota is on groups, and it is only 3."""
+    import urllib.error
+    import urllib.request
+    req = urllib.request.Request(
+        f"https://api.heygen.com/v2/avatar_group/{group_id}", method="DELETE",
+        headers={"X-Api-Key": provider.api_key, "Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=60):
+            return True
+    except (urllib.error.HTTPError, urllib.error.URLError):
+        return False
+
+
 def talking_photo_id(provider, slug: str, *, refresh: bool = False) -> str:
     """Cached talking_photo_id for a brand's character, uploading once if needed."""
     cache_path = brand_dir(slug) / "heygen.json"
@@ -112,6 +132,20 @@ def talking_photo_id(provider, slug: str, *, refresh: bool = False) -> str:
                 return cached["talking_photo_id"]
         except json.JSONDecodeError:
             pass
+
+    # The art changed (or a refresh was forced), so the previous upload is now dead
+    # weight holding one of only three slots. Release it BEFORE uploading the
+    # replacement, or the upload fails on a quota we are ourselves occupying.
+    stale = ""
+    if cache_path.is_file():
+        try:
+            stale = json.loads(cache_path.read_text(encoding="utf-8")).get("talking_photo_id", "")
+        except json.JSONDecodeError:
+            stale = ""
+    if stale:
+        freed = delete_group(provider, stale)
+        print(f"heygen: released previous avatar group {stale[:12]}… "
+              f"({'ok' if freed else 'failed — may need clearing by hand'})")
 
     import tempfile
     with tempfile.TemporaryDirectory() as tmp:
