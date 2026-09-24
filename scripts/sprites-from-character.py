@@ -68,8 +68,40 @@ def _mouth_draw_ops(letter: str, cx: int, cy: int, mw: int,
     return ops
 
 
+def sample_skin(img: Path, cx: int, cy: int, mw: float) -> str:
+    """Find the character's skin tone near the mouth, robustly.
+
+    Sampling a single point above the mouth is what you reach for first and it is wrong:
+    on jimmer that lands on the upper lip (fine), on michael it lands on his SUNGLASSES
+    and returns near-black, which paints a dark blob over his face. So sample a ring of
+    candidates, throw out anything too dark or too desaturated to be skin (hair, glasses,
+    shadow, beard), and take the median of what survives.
+    """
+    pts = [(cx - 2.0 * mw, cy - 0.6 * mw), (cx + 2.0 * mw, cy - 0.6 * mw),   # cheeks
+           (cx - 1.8 * mw, cy + 0.9 * mw), (cx + 1.8 * mw, cy + 0.9 * mw),   # jaw
+           (cx,            cy - 1.6 * mw),                                   # philtrum/nose
+           (cx - 2.4 * mw, cy),            (cx + 2.4 * mw, cy)]
+    good: list[tuple[int, int, int]] = []
+    for px, py in pts:
+        hexv = sample_color(img, max(int(px), 0), max(int(py), 0))
+        r, g, b = (int(hexv[i:i + 2], 16) for i in (1, 3, 5))
+        luma = 0.299 * r + 0.587 * g + 0.114 * b
+        if luma < 70:                 # glasses, hair, shadow
+            continue
+        if max(r, g, b) - min(r, g, b) < 12 and luma < 150:   # flat grey, not skin
+            continue
+        if r < g or r < b:            # skin is red-dominant in every palette we have
+            continue
+        good.append((r, g, b))
+    if not good:
+        return "#D9A177"              # a plain mid skin tone beats a black blob
+    good.sort(key=lambda c: 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2])
+    r, g, b = good[len(good) // 2]
+    return f"#{r:02X}{g:02X}{b:02X}"
+
+
 def sample_color(img: Path, x: int, y: int) -> str:
-    """Hex colour of one pixel — used to find the character's skin tone."""
+    """Hex colour of one pixel."""
     # ImageMagick's format string is full of % escapes, so build it without %-formatting.
     fmt = "%[hex:p{" + str(x) + "," + str(y) + "}]"
     out = subprocess.run(["convert", str(img), "-format", fmt, "info:"],
@@ -196,8 +228,7 @@ def main() -> int:
     cover = None
     if args.cover and args.cover.lower() != "none":
         if args.cover.lower() == "auto":
-            # Just above the mouth is upper lip / cheek — reliably skin on a face drawing.
-            colour = sample_color(img, cx, max(cy - int(mw * 0.95), 0))
+            colour = sample_skin(img, cx, cy, mw)
         else:
             colour = args.cover
         cover = (colour, args.cover_scale)
