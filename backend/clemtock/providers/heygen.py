@@ -18,14 +18,21 @@ from pathlib import Path
 
 from .base import AvatarProvider, ProviderUnavailable
 
-_GENERATE = "https://api.heygen.com/v2/video/generate"
-_STATUS = "https://api.heygen.com/v1/video_status.get"
+# v3. The v2 generate call and v1 status call both carried a Legacy warning naming a
+# 2026-10-31 sunset; migrated 2026-09-24 and the schema confirmed against the live API.
+#
+# v3 is simpler than v2: a flat body instead of video_inputs[].character, and a
+# talking_photo_id goes straight into `avatar_id` — there is no separate field for it.
+#   POST /v3/videos {type, avatar_id, script, voice_id} -> {data:{video_id, status}}
+#   GET  /v3/videos/{id} -> {data:{status, video_url, thumbnail_url, gif_url, duration,…}}
+_GENERATE = "https://api.heygen.com/v3/videos"
+_STATUS = "https://api.heygen.com/v3/videos/"
 _ME = "https://api.heygen.com/v3/users/me"
 _UPLOAD_TALKING_PHOTO = "https://upload.heygen.com/v1/talking_photo"
 
 # NOTE (verified 2026-09-23): /v2/video/generate returns a Legacy warning naming a
 # **2026-10-31 sunset** and pointing at the v3 API. Not just the quota endpoint — the
-# generate call itself. Migrate to POST /v3/videos before then or this stops working.
+# generate call itself. DONE — migrated 2026-09-24, see the v3 note above.
 
 # The account has auto-reload enabled ($75 recharged whenever the wallet drops below
 # $5), and HeyGen exposes no API to change that — it is dashboard-only. So the wallet
@@ -52,6 +59,11 @@ class HeyGenAvatarProvider(AvatarProvider):
         self.poll_every = poll_every
         self.min_balance = float(os.environ.get("HEYGEN_MIN_BALANCE_USD",
                                                 DEFAULT_MIN_BALANCE_USD))
+        # v3 takes aspect_ratio/resolution rather than an explicit pixel dimension.
+        self.aspect_ratio = os.environ.get("HEYGEN_ASPECT_RATIO", "9:16")
+        self.resolution = os.environ.get("HEYGEN_RESOLUTION", "1080p")
+        self.last_video_id: str | None = None
+        self.last_meta: dict = {}
 
     def _req(self, url: str, body: dict | None = None, method: str = "POST", timeout: int = 60):
         data = json.dumps(body).encode("utf-8") if body is not None else None
@@ -124,26 +136,33 @@ class HeyGenAvatarProvider(AvatarProvider):
             raise ProviderUnavailable(
                 "HeyGen needs either a talking_photo_id (your own character) or an "
                 "avatar_id (a stock presenter)")
-        resp = self._req(_GENERATE, {
-            "video_inputs": [{
-                "character": character,
-                "voice": {"type": "text", "input_text": text, "voice_id": voice},
-            }],
-            "dimension": {"width": self.width, "height": self.height},
-        })
+        body = {
+            "type": "avatar",
+            "avatar_id": character["talking_photo_id"] if character["type"] == "talking_photo"
+                         else character["avatar_id"],
+            "script": text,
+            "voice_id": voice,
+            "aspect_ratio": self.aspect_ratio,
+            "resolution": self.resolution,
+        }
+        resp = self._req(_GENERATE, body)
         if resp.get("error"):
             raise ProviderUnavailable(f"HeyGen generate error: {json.dumps(resp['error'])[:300]}")
         video_id = (resp.get("data") or {}).get("video_id")
+        self.last_video_id = video_id
         if not video_id:
             raise ProviderUnavailable(f"HeyGen returned no video_id: {json.dumps(resp)[:300]}")
 
         deadline = time.monotonic() + self.poll_timeout
         while time.monotonic() < deadline:
             time.sleep(self.poll_every)
-            st = self._req(f"{_STATUS}?video_id={video_id}", method="GET")
+            st = self._req(f"{_STATUS}{video_id}", method="GET")
             data = st.get("data") or {}
             status = data.get("status")
             if status == "completed":
+                # v3 hands back more than v2 did; the review UI wants all of it.
+                self.last_meta = {k: data.get(k) for k in
+                                  ("duration", "thumbnail_url", "gif_url", "video_page_url")}
                 url = data.get("video_url")
                 if not url:
                     raise ProviderUnavailable(f"HeyGen completed but no video_url: {json.dumps(data)[:300]}")
