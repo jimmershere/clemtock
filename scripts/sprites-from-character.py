@@ -88,7 +88,10 @@ def sample_skin(img: Path, cx: int, cy: int, mw: float) -> str:
         luma = 0.299 * r + 0.587 * g + 0.114 * b
         if luma < 70:                 # glasses, hair, shadow
             continue
-        if max(r, g, b) - min(r, g, b) < 12 and luma < 150:   # flat grey, not skin
+        # Skin always carries some red/yellow saturation. A near-grey sample is snow,
+        # highlight, metal or paper — and white slipped through when this test was
+        # conditioned on brightness, painting #FDFDFD across a face (north-hero, 2026-09-24).
+        if max(r, g, b) - min(r, g, b) < 18:
             continue
         if r < g or r < b:            # skin is red-dominant in every palette we have
             continue
