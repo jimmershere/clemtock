@@ -21,3 +21,6 @@ node_modules/
 
 # vendored third-party binaries (Rhubarb ~87MB) — fetched by scripts/setup-avatar-chain.sh
 vendor/
+
+# rendered ad output (large, reproducible from scripts/build-ad-au2.sh)
+out/ads/

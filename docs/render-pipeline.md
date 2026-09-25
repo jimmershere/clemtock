@@ -279,6 +279,78 @@ out and it is not optional — migrate `providers/heygen.py` to v3 before then.
    leaves a faint seam at the join — a gradient logotype cannot be repaired convincingly in
    raster. **Fix it in the source vector file.**
 
+## Phase 2 — building whole ads in the web UI
+
+`scripts/build-ad-au2.sh` proves the pipeline end to end from the command line. That
+script is the specification for the UI: the UI should *drive these steps*, not
+reimplement them. What follows is what the CLI run exposed as actually needed.
+
+### The unit the UI is missing: an AD, not a clip
+
+Today portrender's queue holds independent jobs. An ad is an **ordered list of segments
+that share an output**, and nothing models that yet. The minimum addition:
+
+```jsonc
+// data/ads/<ad_id>/ad.json
+{
+  "id": "20260925-au2-social", "brand": "au2", "aspect": "9:16", "fps": 30,
+  "segments": [
+    {"kind": "title",   "text": "AU2", "sub": "APPEARANCE UNLIMITED", "seconds": 1.0},
+    {"kind": "speech",  "character": "michael", "audio_asset": "cashappmebro.wav",
+     "engine": "heygen", "job": "20260925-...", "gesture": {"prompt": "taps a phone",
+     "at": 1.7, "seconds": 1.4}},
+    {"kind": "speech",  "character": "michael", "text": "Head to appearance…",
+     "engine": "heygen", "job": "20260925-092704-au2-cta"},
+    {"kind": "website", "url": "https://appearance-unlimited.com/", "seconds": 1.0},
+    {"kind": "fade",    "seconds": 0.6}
+  ]
+}
+```
+
+Every segment kind maps to a step the script already performs. A segment carries the
+*intent*; the rendered job id is a result, so a segment can be re-rendered without
+losing the edit.
+
+### What the UI needs, in build order
+
+1. **Segment list with add / reorder / delete.** Drag-reorder is the whole interaction.
+   Each row shows kind, duration and estimated cost.
+2. **A running duration and cost total.** This is not decoration — it is the thing that
+   stops mistakes. The cash-app line alone is 4.7s, so "a 4-5 second ad" containing two
+   spoken lines is arithmetically impossible, and the operator should see that *before*
+   rendering rather than after. Show `11.6s · $0.18` and update live.
+3. **Per-segment preview.** Each segment renders to its own file already; show it
+   inline, approve it, re-render just that one. Never re-render the whole ad to fix
+   one line.
+4. **Assemble button** → runs the concat + fade, produces the draft, drops it in the
+   existing review queue as `pending`.
+5. **Publish** stays delegated (CLAUDE.md): the button lives here, the credential and
+   the API call live in the venture that owns them.
+
+### Things the CLI run exposed that the UI must handle
+
+- **Cost asymmetry is severe.** Speech is ~$0.019/s; a cinematic gesture is ~$0.74/s
+  and bills ~10s minimum unless `duration` is set. A gesture must be a deliberate,
+  confirmed action in the UI with the price on the button — never a default toggle.
+- **Segments must be normalised before concat.** Different sources arrive at different
+  sizes, frame rates and audio layouts; `norm()` in the script forces 1080x1920 / 30fps
+  / 48kHz stereo. Skip it and concat produces silent or stuttering joins.
+- **Every segment needs an audio track**, even silent ones, or concat drops streams.
+  `anullsrc` is the fix.
+- **Animation expressions are easy to get backwards.** The title card shipped its first
+  cut sliding *out* to black because the crop expression ran the wrong way. Per-segment
+  preview (point 3) is what catches this in seconds instead of after a full assemble.
+- **A still needs motion.** Both static cards (title, website) carry a move — a slide
+  and a slow push-in. Without it they read as a stall in the middle of a video.
+
+### Sequence
+
+Phase 2a: the ad model + segment list + duration/cost totals, assembling from segments
+that already exist as jobs. Phase 2b: per-segment re-render and preview. Phase 2c: the
+gesture control, behind its confirmation. Publishing last, and only after a real ad has
+been made by hand this way — the same staging as `render-pipeline.md` argues for the
+business itself.
+
 ## Renting this out as an API — staged, not now
 
 jimmer wants to resell this as an API for others to generate cartoon/avatar ads.
