@@ -235,6 +235,39 @@ video's length matches the audio exactly.
 Caveat measured: Chatterbox speaks more slowly than HeyGen TTS — the same CTA line came
 out 6.14s cloned versus 4.87s from HeyGen. Budget for it, or trim the copy.
 
+### Domains: never hand a TTS engine a raw URL
+
+An ad that hesitates over the client's own web address sounds like the reader has never
+heard of them. Appearance Unlimited is a weekly-ad account, so this recurs every week.
+
+Six phrasings synthesised with the real cloned voice and measured for internal silence
+over 80 ms (leading/trailing excluded), 2026-09-25:
+
+| phrasing | gaps | total |
+|---|---|---|
+| `AppearanceUnlimited dot com` | **0** | **0.000 s** |
+| `appearance-unlimited dot com` | 1 | 0.271 s |
+| `appearance dash unlimited dot com` | 2 | 0.275 s |
+| `appearance unlimited dot com` | 2 | 0.295 s |
+| `appearanceunlimited dot com` | 3 | 0.315 s |
+| `appearance-unlimited.com` (raw) | 2 | **0.592 s** |
+
+Both useful results are counter-intuitive:
+
+- **Saying "dash" aloud does not help.** It is the obvious fix, measured no better than
+  plain spaces, and added 0.84 s of runtime.
+- **CamelCase with no separator is what removes the pause** — and the engine still says
+  both words (3.34 s camel vs 3.30 s spaced, so it is not rushing). Lower-cased joining
+  is *worse*, so the capitals do real work.
+
+`clemtock/speech.py::speakable()` applies this automatically inside **both** TTS paths,
+Chatterbox and HeyGen, so copy can be written naturally with the real URL. On the actual
+CTA line it cut hesitation 61% (0.829 s → 0.320 s) and the line 1.08 s shorter; the gaps
+that remain are the sentence boundary, which belongs there.
+
+Write `appearance-unlimited.com` in the script. Do not hand-write the spoken form — the
+rewriter is the single place that knowledge lives, and `tests/test_speech.py` pins it.
+
 ### Loudness: match it or the ad sounds broken
 
 Sources disagree badly. Measured on the first draft:

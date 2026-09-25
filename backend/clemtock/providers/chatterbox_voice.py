@@ -23,6 +23,7 @@ import os
 import subprocess
 from pathlib import Path
 
+from ..speech import speakable
 from .base import ProviderUnavailable
 
 # providers/ is one level deeper than config.py, so this is parents[3], not [2]:
@@ -64,7 +65,12 @@ class ChatterboxVoice:
                                capture_output=True, timeout=120)
         return probe.returncode == 0
 
-    def synthesize(self, text: str, out: Path, *, voice_ref: Path | None = None) -> Path:
+    def synthesize(self, text: str, out: Path, *, voice_ref: Path | None = None,
+                   rewrite_urls: bool = True) -> Path:
+        # A raw domain is the worst thing you can hand a TTS engine — measured 0.592s of
+        # hesitation on "appearance-unlimited.com" against 0.000s for the spoken form.
+        # See clemtock/speech.py. Opt out with rewrite_urls=False.
+        text = speakable(text) if rewrite_urls else text
         text = (text or "").strip()
         if not text:
             raise ProviderUnavailable("nothing to synthesise: empty text")

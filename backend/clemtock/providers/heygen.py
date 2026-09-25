@@ -16,6 +16,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from ..speech import speakable
 from .base import AvatarProvider, ProviderUnavailable
 
 # v3. The v2 generate call and v1 status call both carried a Legacy warning naming a
@@ -232,7 +233,9 @@ class HeyGenAvatarProvider(AvatarProvider):
             # An audio source REPLACES script+voice_id; sending both is rejected.
             body["audio_asset_id"] = self.upload_audio(Path(audio))
         else:
-            body["script"] = text
+            # Same rewrite as the local engine, so a line reads identically whichever
+            # voice speaks it (clemtock/speech.py).
+            body["script"] = speakable(text)
             body["voice_id"] = voice
         resp = self._req(_GENERATE, body)
         if resp.get("error"):
