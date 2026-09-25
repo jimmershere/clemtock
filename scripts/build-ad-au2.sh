@@ -80,9 +80,18 @@ ffmpeg -v error -y -loop 1 -t 1.0 -i "$WORK/title.png" \
 
 # ------------------------------------------------------- 2+3. the spoken pieces --
 say "2/4  spoken segments"
-norm() {  # force identical codec/params so concat never re-encodes badly
+# Force identical codec/params so concat never re-encodes badly, AND match loudness.
+#
+# Loudness matters more than it sounds. Measured on the first draft: the recorded WAV
+# line sat at -11.9 LUFS and the HeyGen TTS line at -22.1 LUFS — a 10 dB drop halfway
+# through the ad, which reads as the second half being broken. Sources will always
+# differ (a phone recording, a TTS engine, a cloned voice), so every spoken segment is
+# normalised to one target instead of trusting them to agree.
+LUFS="${LUFS:--14}"     # punchy social target; platforms re-normalise near here anyway
+norm() {
   ffmpeg -v error -y -i "$1" \
     -vf "scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=#0c0c0d,fps=${FPS},format=yuv420p" \
+    -af "loudnorm=I=${LUFS}:TP=-1.5:LRA=11" \
     -c:v libx264 -preset medium -crf 20 -c:a aac -b:a 128k -ar 48000 -ac 2 "$2"
 }
 norm "$CASHAPP" "$WORK/02-cashapp.mp4"

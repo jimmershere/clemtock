@@ -50,6 +50,7 @@ _ME = "https://api.heygen.com/v3/users/me"
 CINEMATIC_USD_PER_SEC = 0.74
 AVATAR_USD_PER_SEC = 0.019
 _UPLOAD_TALKING_PHOTO = "https://upload.heygen.com/v1/talking_photo"
+_ASSETS = "https://api.heygen.com/v3/assets"
 
 # NOTE (verified 2026-09-23): /v2/video/generate returns a Legacy warning naming a
 # **2026-10-31 sunset** and pointing at the v3 API. Not just the quota endpoint — the
@@ -137,6 +138,44 @@ class HeyGenAvatarProvider(AvatarProvider):
             "type": "cinematic_avatar", "avatar_id": [avatar_id], "prompt": prompt,
             "duration": duration, "aspect_ratio": aspect_ratio, "resolution": resolution})
 
+    def upload_audio(self, path: Path) -> str:
+        """Upload a WAV/MP3 and get an asset_id to drive lip-sync with.
+
+        This is how a REAL voice reaches HeyGen — a recording, or a Chatterbox clone —
+        instead of paying for HeyGen TTS. The rendered video's length then matches the
+        audio exactly.
+
+        Note the endpoint wants **multipart/form-data with a `file` field**; posting the
+        raw bytes is rejected outright, and upload.heygen.com/v1/asset separately insists
+        on `audio/x-wav` rather than `audio/wav`.
+        """
+        import uuid
+        path = Path(path)
+        if not path.is_file():
+            raise ProviderUnavailable(f"no such audio file: {path}")
+        data = path.read_bytes()
+        ctype = {".wav": "audio/wav", ".mp3": "audio/mpeg",
+                 ".m4a": "audio/mp4"}.get(path.suffix.lower(), "application/octet-stream")
+        b = "----hg" + uuid.uuid4().hex
+        body = (f'--{b}\r\nContent-Disposition: form-data; name="file"; '
+                f'filename="{path.name}"\r\nContent-Type: {ctype}\r\n\r\n').encode() \
+               + data + f"\r\n--{b}--\r\n".encode()
+        req = urllib.request.Request(
+            _ASSETS, data=body, method="POST",
+            headers={"X-Api-Key": self.api_key,
+                     "Content-Type": f"multipart/form-data; boundary={b}"})
+        try:
+            with urllib.request.urlopen(req, timeout=600) as r:
+                resp = json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            raise ProviderUnavailable(
+                f"HeyGen asset upload HTTP {e.code}: "
+                f"{e.read().decode('utf-8','replace')[:300]}") from e
+        aid = (resp.get("data") or {}).get("asset_id")
+        if not aid:
+            raise ProviderUnavailable(f"no asset_id returned: {json.dumps(resp)[:250]}")
+        return aid
+
     def upload_talking_photo(self, image: Path) -> str:
         """Upload a character picture and get an id you can drive with speech.
 
@@ -167,7 +206,9 @@ class HeyGenAvatarProvider(AvatarProvider):
         return tp
 
     def generate(self, text: str, out: Path, *, avatar_id: str | None = None,
-                 voice_id: str | None = None, talking_photo_id: str | None = None) -> Path:
+                 voice_id: str | None = None, talking_photo_id: str | None = None,
+                 audio: Path | None = None) -> Path:
+        """`audio` overrides `text`: lip-sync to a real recording rather than TTS."""
         self.check_budget()
         voice = voice_id or self.voice_id
         tp = talking_photo_id or self.talking_photo_id
@@ -184,11 +225,15 @@ class HeyGenAvatarProvider(AvatarProvider):
             "type": "avatar",
             "avatar_id": character["talking_photo_id"] if character["type"] == "talking_photo"
                          else character["avatar_id"],
-            "script": text,
-            "voice_id": voice,
             "aspect_ratio": self.aspect_ratio,
             "resolution": self.resolution,
         }
+        if audio:
+            # An audio source REPLACES script+voice_id; sending both is rejected.
+            body["audio_asset_id"] = self.upload_audio(Path(audio))
+        else:
+            body["script"] = text
+            body["voice_id"] = voice
         resp = self._req(_GENERATE, body)
         if resp.get("error"):
             raise ProviderUnavailable(f"HeyGen generate error: {json.dumps(resp['error'])[:300]}")

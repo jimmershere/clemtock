@@ -211,6 +211,10 @@ def cmd_avatar(args: argparse.Namespace) -> int:
     occasional premium spot, but it bills per video and its stock library has no
     cartoon avatars at all.
     """
+    if not args.text and not getattr(args, "audio", None):
+        print("clemtock avatar: give --text, or --audio to lip-sync a recording",
+              file=sys.stderr)
+        return 2
     if args.provider == "heygen" and not (args.brand or args.avatar_id
                                           or os.environ.get("HEYGEN_TALKING_PHOTO_ID")):
         print("clemtock avatar: heygen needs --brand <slug> (your character) or "
@@ -247,7 +251,8 @@ def _avatar_heygen(args: argparse.Namespace) -> int:
         t0 = time.time()
         out = prov.generate(args.text, Path(args.out),
                             avatar_id=args.avatar_id, voice_id=args.voice_id,
-                            talking_photo_id=tp)
+                            talking_photo_id=tp,
+                            audio=Path(args.audio) if args.audio else None)
         spent = before - prov.balance()
         print(f"clemtock avatar: HeyGen took {time.time()-t0:.0f}s, "
               f"spent ${spent:.2f} (wallet ${prov.balance():.2f})", file=sys.stderr)
@@ -533,7 +538,7 @@ def build_parser() -> argparse.ArgumentParser:
     vid.set_defaults(func=cmd_video)
 
     av = sub.add_parser("avatar", help="Talking avatar: cartoon (local, free) or heygen (paid)")
-    av.add_argument("--text", required=True, help="what the avatar says")
+    av.add_argument("--text", default="", help="what the avatar says (omit when --audio)")
     av.add_argument("--provider", choices=("cartoon", "heygen"), default="cartoon",
                     help="cartoon = Chatterbox+Rhubarb+ffmpeg on this host, no cost (default)")
     av.add_argument("--out", default=str(_REPO / "out" / "clem-avatar.mp4"))
@@ -557,6 +562,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="[heygen] a stock presenter; ignored when --brand is given")
     av.add_argument("--voice-id", dest="voice_id", default=None,
                     help="[heygen] voice id (HEYGEN_VOICE_CLONE_ID is the default)")
+    av.add_argument("--audio", default=None,
+                    help="[heygen] lip-sync to this WAV/MP3 instead of speaking --text "
+                         "(a recording, or a Chatterbox clone). Overrides --voice-id.")
     av.add_argument("--refresh-photo", action="store_true",
                     help="[heygen] re-upload the character even if an id is cached")
     av.set_defaults(func=cmd_avatar)

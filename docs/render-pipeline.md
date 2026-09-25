@@ -211,6 +211,44 @@ a bill — and deleting the video afterwards does **not** refund it. Two stray p
 To test whether a field is accepted, put it in a body that is otherwise *invalid* (leave
 out `avatar_id`), so a success is impossible.
 
+### Voice continuity: clone locally, lip-sync remotely
+
+The first AU2 draft had Michael speaking in **two different voices** — a recorded WAV for
+one line, a stock HeyGen voice for the next. The fix chains the two engines:
+
+```bash
+# 1. Chatterbox clones the voice from the existing recording and speaks the new line.
+#    Free, local, MIT. ~46s of CPU for a 6s line.
+python3 - <<'EOF'
+from clemtock.providers.chatterbox_voice import ChatterboxVoice
+ChatterboxVoice(voice_ref="reference.wav").synthesize("the new line", "cloned.wav")
+EOF
+
+# 2. HeyGen lip-syncs the avatar to that audio. No HeyGen TTS involved.
+python3 -m portrender video -c michael --engine heygen --audio cloned.wav
+```
+
+So the voice is cloned for nothing on our own hardware and only the *lip-sync* is paid
+for. `--audio` exists on both `clemtock avatar` and `portrender video`, and the rendered
+video's length matches the audio exactly.
+
+Caveat measured: Chatterbox speaks more slowly than HeyGen TTS — the same CTA line came
+out 6.14s cloned versus 4.87s from HeyGen. Budget for it, or trim the copy.
+
+### Loudness: match it or the ad sounds broken
+
+Sources disagree badly. Measured on the first draft:
+
+| segment | source | loudness |
+|---|---|---|
+| cash-app line | phone recording | **-11.9 LUFS** |
+| CTA | HeyGen TTS | **-22.1 LUFS** |
+
+A **10 dB** drop halfway through an ad does not read as "quieter", it reads as broken.
+`build-ad-au2.sh` now runs every spoken segment through
+`loudnorm=I=-14:TP=-1.5:LRA=11`, after which the two sat 0.3 dB apart. Normalise to a
+target; never trust sources to agree.
+
 ### Audio-driven lip-sync
 
 Upload a WAV to `POST /v3/assets` as **multipart/form-data with a `file` field** (raw
