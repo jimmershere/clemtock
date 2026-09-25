@@ -28,6 +28,27 @@ from .base import AvatarProvider, ProviderUnavailable
 _GENERATE = "https://api.heygen.com/v3/videos"
 _STATUS = "https://api.heygen.com/v3/videos/"
 _ME = "https://api.heygen.com/v3/users/me"
+
+# ---------------------------------------------------------------------------
+# NEVER probe POST /v3/videos to discover its schema.
+#
+# A 400 is free and names the next missing field, which makes it *look* like a
+# safe way to learn the API. It is not: the moment the body becomes valid the
+# call returns 200 and a real render is queued AND BILLED. Deleting the video
+# afterwards does not refund it.
+#
+# Learned the expensive way on 2026-09-25 — two stray probes for `duration` and
+# `aspect_ratio` returned 200 and cost $14.60 between them.
+#
+# To check a field is accepted, add it to a body that is otherwise INVALID (omit
+# avatar_id, say) so the request can never succeed.
+# ---------------------------------------------------------------------------
+
+# Cinematic avatar is a different price tier entirely — measured ~$0.74/s against
+# ~$0.019/s for a plain talking head, roughly 39x. It also renders ~10s by default,
+# so one call is ~$7 whether you use all of it or a second of it.
+CINEMATIC_USD_PER_SEC = 0.74
+AVATAR_USD_PER_SEC = 0.019
 _UPLOAD_TALKING_PHOTO = "https://upload.heygen.com/v1/talking_photo"
 
 # NOTE (verified 2026-09-23): /v2/video/generate returns a Legacy warning naming a
@@ -92,6 +113,29 @@ class HeyGenAvatarProvider(AvatarProvider):
                 f"Auto-reload would recharge the card rather than stopping — refusing. "
                 f"Raise HEYGEN_MIN_BALANCE_USD deliberately, or top up by hand.")
         return bal
+
+    def cinematic(self, avatar_id: str, prompt: str, *, confirm: bool = False,
+                  duration: int = 4, aspect_ratio: str = "9:16",
+                  resolution: str = "1080p") -> dict:
+        """Prompt-directed MOTION (gestures, camera moves). Silent — no lip-sync.
+
+        Gated behind `confirm` because this is the expensive tier: ~$0.74/s versus
+        ~$0.019/s for a talking head. `duration` and `aspect_ratio` ARE accepted and
+        default low here — omitting duration renders ~10s and bills ~$7 for it.
+
+        Intended use is a second or two of gesture cut into a cheap lip-synced base,
+        not a whole ad. See docs/render-pipeline.md.
+        """
+        est = duration * CINEMATIC_USD_PER_SEC
+        if not confirm:
+            return {"dry_run": True, "would_cost_usd": round(est, 2),
+                    "body": {"type": "cinematic_avatar", "avatar_id": [avatar_id],
+                             "prompt": prompt, "duration": duration,
+                             "aspect_ratio": aspect_ratio, "resolution": resolution}}
+        self.check_budget()
+        return self._req(_GENERATE, {
+            "type": "cinematic_avatar", "avatar_id": [avatar_id], "prompt": prompt,
+            "duration": duration, "aspect_ratio": aspect_ratio, "resolution": resolution})
 
     def upload_talking_photo(self, image: Path) -> str:
         """Upload a character picture and get an id you can drive with speech.

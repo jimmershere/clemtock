@@ -179,6 +179,46 @@ Revisit when any of these is true:
 - a client needs offline or on-premise rendering
 - the v2 sunset below forces a rewrite anyway
 
+### Cinematic avatar: gestures, at 39x the price
+
+`type: cinematic_avatar` takes a **prompt** and directs the avatar's *motion* — it
+produced a convincing "holds a phone and taps the screen with his thumb", complete with a
+camera push-in on the hands. It is the only way to get body language out of a still.
+
+Two hard constraints:
+
+- **It is silent.** It accepts no audio at all — not `script`+`voice_id`, not `audio_url`,
+  not `audio_asset_id`; all are rejected as extra inputs. So it cannot say anything.
+- **It is expensive.** Measured **~$0.74 per second** against ~$0.019/s for a talking
+  head — roughly **39x**. Omit `duration` and it renders ~10s, billing ~$7 for one call.
+
+So the shape that works is an **edit, not a render**: lip-sync the whole line cheaply with
+`type: avatar` + `audio_asset_id`, then cut in a second or two of cinematic gesture over
+the moments when the face is not on screen. Done for `michael-cashapp-gesture.mp4`: a 4.7s
+ad with 1.4s of phone-tapping cut in, where the cinematic camera is on his hands so there
+is no lip-sync to mismatch.
+
+`duration` and `aspect_ratio` are both accepted and `providers/heygen.py::cinematic()`
+defaults them low, behind a `confirm=True` gate that reports the estimated cost first.
+
+#### Never probe POST /v3/videos
+
+A 400 is free and helpfully names the next missing field, which makes schema-probing look
+safe. **It is not.** The moment the body becomes valid you get a 200, a queued render, and
+a bill — and deleting the video afterwards does **not** refund it. Two stray probes for
+`duration` and `aspect_ratio` cost **$14.60** on 2026-09-25.
+
+To test whether a field is accepted, put it in a body that is otherwise *invalid* (leave
+out `avatar_id`), so a success is impossible.
+
+### Audio-driven lip-sync
+
+Upload a WAV to `POST /v3/assets` as **multipart/form-data with a `file` field** (raw
+binary is rejected, and `upload.heygen.com/v1/asset` wants `audio/x-wav` specifically),
+then pass the returned `asset_id` as `audio_asset_id` on a `type: avatar` render. The
+output duration matches the source audio exactly. This is how a real recorded voice — or a
+Chatterbox clone — gets HeyGen-quality lip-sync without paying for HeyGen TTS.
+
 ### The 3-character limit is a PLAN limit, not a product one
 
 Hit on 2026-09-24: `You have exceeded your limit of 3 photo avatars`. It looks like a
