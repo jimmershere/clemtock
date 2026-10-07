@@ -158,7 +158,7 @@
     const nodes = ctx.bg(null);
     nodes.push(h("div", { key: "gl", style: { position: "absolute", left: "50%", top: 700,
       width: 900, height: 900, marginLeft: -450, marginTop: -450,
-      background: "radial-gradient(circle,rgba(166,232,74,.16),transparent 60%)", opacity: p } }));
+      background: "radial-gradient(circle," + ((scene.params && scene.params.glow) || "rgba(166,232,74,.16)") + ",transparent 60%)", opacity: p } }));
     if (c.headline)
       nodes.push(h("div", { key: "w", style: { position: "absolute", left: 80, right: 80,
         top: 620, textAlign: "center", fontFamily: F.cond, fontWeight: 800, fontStyle: "italic",

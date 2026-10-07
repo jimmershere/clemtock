@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "duration": 22,
+  "palette": {
+    "ink": "#0c1218",
+    "cream": "#efe8dc",
+    "text": "#efe8dc",
+    "muted": "#8e9bab",
+    "lime": "#e4a04a",
+    "orange": "#e4a04a",
+    "line": "#2c3a49",
+    "line2": "#2c3a49"
+  },
+  "assets": {
+    "jimmer": {
+      "kind": "image",
+      "source": "upload",
+      "src": "assets/pw-jimmer.png"
+    },
+    "dashboard": {
+      "kind": "image",
+      "source": "upload",
+      "src": "assets/pw-dashboard-crop.png"
+    },
+    "storefront": {
+      "kind": "image",
+      "source": "upload",
+      "src": "assets/pw-storefront.png"
+    }
+  },
+  "scenes": [
+    {
+      "id": "open",
+      "start": 0,
+      "end": 2.6,
+      "template": "title",
+      "copy": {
+        "kicker": "PORTWRIGHT.IO \u00b7 TRAVERSE CITY, MI",
+        "headline": "WE BUILD\nTHE HARD\nSTUFF.",
+        "sub": "Software \u00b7 Consulting \u00b7 AI you can audit"
+      },
+      "motion": "impact"
+    },
+    {
+      "id": "soak",
+      "start": 2.6,
+      "end": 6.4,
+      "template": "terminal",
+      "copy": {
+        "kicker": "RECEIPTS, NOT PROMISES",
+        "headline": "triage soak --records 13,000,000",
+        "sub": "\u2192 13,443,911 healthcare claims processed\n\u2192 sustained 10,210/s \u00b7 peak 48,330/s\n\u2192 full audit trail, zero hand-waving\n\u2713 PASS \u2014 2-hour large-file soak"
+      }
+    },
+    {
+      "id": "records",
+      "start": 6.4,
+      "end": 9.8,
+      "template": "split",
+      "assets": [
+        "dashboard"
+      ],
+      "copy": {
+        "kicker": "THE RECEIPT",
+        "headline": "FROM 13 MILLION\nHEALTHCARE RECORDS",
+        "sub": "A real soak test. A real dashboard. Replayable."
+      }
+    },
+    {
+      "id": "storefront",
+      "start": 9.8,
+      "end": 13.2,
+      "template": "photo",
+      "assets": [
+        "storefront"
+      ],
+      "motion": {
+        "from": 1.0,
+        "to": 1.14
+      },
+      "copy": {
+        "headline": "TO YOUR ENTIRE\nDIGITAL STOREFRONT"
+      }
+    },
+    {
+      "id": "operator",
+      "start": 13.2,
+      "end": 16.8,
+      "template": "split",
+      "assets": [
+        "jimmer"
+      ],
+      "copy": {
+        "kicker": "THE OPERATOR",
+        "headline": "WE BUILD THE\nHARD STUFF.",
+        "sub": "And we make it fast."
+      }
+    },
+    {
+      "id": "cta",
+      "start": 16.8,
+      "end": 22,
+      "template": "cta",
+      "copy": {
+        "headline": "PORTWRIGHT",
+        "sub": "P O R T W R I G H T . I O",
+        "cta": "BUILT, NOT BOUGHT."
+      },
+      "params": {
+        "glow": "rgba(228,160,74,.18)"
+      }
+    }
+  ]
+}
