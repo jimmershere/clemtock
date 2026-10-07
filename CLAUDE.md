@@ -32,7 +32,14 @@ Deleting the video afterwards does **not** refund it. Two such probes cost $14.6
 
 **HeyGen's avatar quota counts avatar GROUPS, not talking photos.** Deleting individual
 photos returns 200 and frees nothing. `heygen_character.py` calls `delete_group()` before
-re-upload for exactly this reason.
+re-upload for exactly this reason — each edit to a character's art burns a slot otherwise.
+
+The cap itself is **not 3 any more**. That was the pre-upgrade plan limit, and it is
+hard-coded in prose in `heygen_character.py`'s docstring. On Creator a fourth group
+uploaded cleanly (`portwright`, 2026-10-07), so the account now holds jimmer, michael,
+north-hero and portwright. Check `GET /v2/avatar_group.list` rather than trusting any
+number written down here; uploads are free, so attempting one is a cheaper way to learn
+the current limit than reasoning about the plan.
 
 Gate conventions across the fleet, all opt-in and all dry/safe by default:
 `local81 --apply`, tee-empire `--live`, clemtock cinematic `confirm=True`.
@@ -83,11 +90,24 @@ the second half being broken. Every spoken segment goes through
 - **Playwright captures no pointer in video frames.** `capture-site-demo.mjs` injects its
   own DOM cursor and moves it in steps; that stepping is what makes a recording read as a
   person rather than a script hitting selectors.
+- **HeyGen returns 25 fps, and `zoompan` does not resample.** `zoompan` with `d=1` emits
+  one output frame per *input* frame; its own `fps=` only labels the timebase. Put an
+  explicit `fps=30` **before** zoompan or a 9.02 s take becomes 225 frames stamped at
+  30 fps — a 7.5 s video against 9.02 s of audio, which the assemble then truncates
+  silently. Cost an hour on 2026-10-07; the container duration still reads correct, so
+  check the **video stream** duration, not `format=duration`.
+- **ImageMagick `-stroke` persists.** After drawing the amber brackets, every later
+  `-annotate` inherits a 5 px stroke that swamps the fill at small point sizes. Reset with
+  `-stroke none`. Likewise, two `-annotate` offsets on one centred canvas overlap rather
+  than flow — render words separately and `+append` them (this is what produced
+  "POWRIGHT").
 
 ## Worked examples
 
-`scripts/build-ad-au2.sh` and `scripts/build-ad-au2-liar.sh` assemble complete ads from
-the command line, commented step by step. They are the specification for the phase-2 web
+`scripts/build-ad-au2.sh`, `scripts/build-ad-au2-liar.sh` and
+`scripts/build-ad-portwright.sh` assemble complete ads from the command line, commented
+step by step. The portwright one is the brand-exact example: its palette and wordmark are
+sampled from the live site rather than invented. They are the specification for the phase-2 web
 UI — **which is paused** at jimmer's request until the small issues are worked out. Do not
 start building it.
 

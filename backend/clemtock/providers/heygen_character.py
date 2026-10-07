@@ -13,9 +13,13 @@ This module owns the two fiddly parts:
    a PNG alpha channel is not a background.
 
 2. **The cache, and cleaning up after it.** Every upload creates a new photo avatar
-   *group*, and the plan caps those at **3** — not at 3 characters, at 3 groups. Caching
-   the id in `brands/<slug>/heygen.json` stops us re-uploading on every render, but each
-   time the artwork legitimately changes we burn another slot.
+   *group*, and the plan caps those — not at N characters, at N groups. Caching the id in
+   `brands/<slug>/heygen.json` stops us re-uploading on every render, but each time the
+   artwork legitimately changes we burn another slot.
+
+   The cap was 3 when this was written and is higher on Creator: a fourth group uploaded
+   cleanly on 2026-10-07. Do not hard-code the number — ask
+   `GET /v2/avatar_group.list`, or just attempt the upload, which costs nothing.
 
    Worse, the two are separate resources: deleting the talking photo leaves the group
    behind, still counting against the quota. Three edits to one character filled the
