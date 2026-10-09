@@ -57,10 +57,26 @@ _ASSETS = "https://api.heygen.com/v3/assets"
 # **2026-10-31 sunset** and pointing at the v3 API. Not just the quota endpoint — the
 # generate call itself. DONE — migrated 2026-09-24, see the v3 note above.
 
-# The account has auto-reload enabled ($75 recharged whenever the wallet drops below
-# $5), and HeyGen exposes no API to change that — it is dashboard-only. So the wallet
-# is not a budget, it is a tap. Refuse to generate once the balance nears the trigger,
-# or an unattended pipeline will quietly re-bill the card forever. See issue PR-13.
+# AUTO-RELOAD: THE TWO SOURCES DISAGREE. UNRESOLVED — do not state either as fact.
+#
+#   GET /v3/users/me  returns  wallet.auto_reload = {enabled: True, amount_usd: 75.0,
+#                              threshold_usd: 5.0}        (re-read 2026-10-09)
+#   The HeyGen dashboard reports auto-reload NOT enabled  (jimmer, checked repeatedly,
+#                                                          reported 2026-10-09)
+#
+# Both are first-hand. The API field may be stale, may describe a stored-but-inactive
+# configuration, or the two may simply mean different things. Nobody has established
+# which, and HeyGen exposes no API to change the setting either way.
+#
+# This floor therefore stays, but on the weaker justification: IF the API is right the
+# wallet is a tap rather than a budget, and an unattended pipeline would quietly re-bill
+# the card forever. If the dashboard is right the floor merely stops renders early,
+# which is harmless. Cheap insurance against the expensive reading. Issue PR-13.
+#
+# NOTE this blocks the decisive experiment. check_budget() refuses at $10, and the
+# reported auto-reload trigger is $5 — so letting the wallet run down will hit THIS
+# refusal first and never reach the threshold. To actually find out, the floor has to
+# go below the trigger: HEYGEN_MIN_BALANCE_USD=2.
 DEFAULT_MIN_BALANCE_USD = 10.0
 
 
