@@ -111,6 +111,27 @@ def make_portrait(slug: str, dst: Path, *, side_px: int = 768,
     return dst
 
 
+def brand_voice_id(slug: str) -> str:
+    """The voice a brand speaks with, from `brands/<slug>/voice.json`.
+
+    This file existed as documentation for weeks while the pipeline ignored it: the voice
+    came from --voice-id or a global env var, so every ad script hard-coded an id. That is
+    how `michael` kept a placeholder STOCK voice across three finished ads without anyone
+    noticing — the brand file said "PLACEHOLDER, replace before client work" and nothing
+    read it. Resolving it here makes the brand directory the single source of truth, so
+    changing a character's voice is one file edit rather than a hunt through build scripts.
+
+    Returns "" when unset, so callers can fall back without special-casing.
+    """
+    f = PORTRENDER_BRANDS / slug / "voice.json"
+    if not f.is_file():
+        return ""
+    try:
+        return (json.loads(f.read_text(encoding="utf-8")).get("voice_id") or "").strip()
+    except (json.JSONDecodeError, OSError):
+        return ""
+
+
 def _fingerprint(img: Path) -> str:
     return hashlib.sha256(img.read_bytes()).hexdigest()[:16]
 

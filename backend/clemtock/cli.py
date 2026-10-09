@@ -240,17 +240,26 @@ def _avatar_heygen(args: argparse.Namespace) -> int:
                                     voice_id=cfg.heygen_voice_id,
                                     width=args.width, height=args.height)
         tp = None
+        voice_id = args.voice_id
         if args.brand:
             tp = heygen_character.talking_photo_id(prov, args.brand,
                                                    refresh=args.refresh_photo)
             print(f"clemtock avatar: brand {args.brand} -> talking_photo {tp[:12]}…",
                   file=sys.stderr)
+            # Precedence: explicit --voice-id, then the brand's own voice.json, then the
+            # global env default. Without the middle step brands/<slug>/voice.json is
+            # inert documentation and every caller has to hard-code an id.
+            if not voice_id:
+                voice_id = heygen_character.brand_voice_id(args.brand)
+                if voice_id:
+                    print(f"clemtock avatar: brand voice {voice_id[:12]}… "
+                          f"(from brands/{args.brand}/voice.json)", file=sys.stderr)
         before = prov.balance()
         print("clemtock avatar: submitting to HeyGen; this takes a minute or two…",
               file=sys.stderr)
         t0 = time.time()
         out = prov.generate(args.text, Path(args.out),
-                            avatar_id=args.avatar_id, voice_id=args.voice_id,
+                            avatar_id=args.avatar_id, voice_id=voice_id,
                             talking_photo_id=tp,
                             audio=Path(args.audio) if args.audio else None)
         spent = before - prov.balance()

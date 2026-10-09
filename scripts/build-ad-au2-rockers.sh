@@ -42,14 +42,13 @@ dur() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1"; }
 SCRIPT_TEXT="Every spring I see the same thing. Salt, slush, and a rocker panel that looks fine... until you poke it. Rockers aren't just trim. They're what keeps the body from folding in the middle. Once they rot from the inside, Bondo won't save them. At Appearance Unlimited we cut out the bad metal, weld in new rockers, and finish it so you can't tell where the repair starts. Thirty years in Traverse City. Collision, paint, classics, and the truck you swore you'd fix this year. Stop driving a beater. Let's turn it back into a beauty. Appearance Unlimited. Link's in the bio."
 
 # ---------------------------------------------------------------- 0. the voice --
-# NOTE: michael's voice_id is a HeyGen STOCK voice ("Mysterious Michael - Broadcaster"),
-# NOT a clone of Michael. There is no Michael clone on the account — checked all 2970
-# voices on 2026-10-09; the only cloned voice is jimmer's. See brands/michael/voice.json.
+# No --voice-id here on purpose: --brand resolves it from brands/michael/voice.json, so
+# the character's voice is defined in one place instead of in every ad script. That gap
+# is why a placeholder STOCK voice survived three finished ads.
 if [ "$RENDER" = 1 ]; then
   say "rendering the VO (bills ~\$1.50)"
   ( cd "$ROOT/backend"
     python3 -m clemtock avatar --provider heygen --brand michael \
-      --voice-id f87630549ac44d558eeaa0dd2f468ba0 \
       --text "$SCRIPT_TEXT" --out "$VO" )
 fi
 [ -f "$VO" ] || { echo "no VO at $VO — run with --render" >&2; exit 1; }
