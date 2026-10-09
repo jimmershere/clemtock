@@ -30,16 +30,37 @@ Deleting the video afterwards does **not** refund it. Two such probes cost $14.6
 [`providers/heygen.py`](backend/clemtock/providers/heygen.py) is gated behind
 `confirm=True` and why `check_budget()` exists. Do not remove either.
 
-**HeyGen's avatar quota counts avatar GROUPS, not talking photos.** Deleting individual
-photos returns 200 and frees nothing. `heygen_character.py` calls `delete_group()` before
-re-upload for exactly this reason — each edit to a character's art burns a slot otherwise.
+**A photo-avatar upload costs ~79 credits / ~$1.32. Uploads are NOT free.** This was
+believed to be free and written down as free, and on 2026-10-09 an 8-upload probe to test
+the slot limit cost **$10.53** on that false premise. Derived twice and the two agree
+exactly: 8 uploads burned 4404→3772 credits ($73.40→$62.87), i.e. 79 credits each; and the
+single `portwright` upload on 2026-10-07 took 100 credits with the render, of which the
+render was 21. **Deletes are free** — the 8 deletes in that probe added nothing.
 
-The cap itself is **not 3 any more**. That was the pre-upgrade plan limit, and it is
-hard-coded in prose in `heygen_character.py`'s docstring. On Creator a fourth group
-uploaded cleanly (`portwright`, 2026-10-07), so the account now holds jimmer, michael,
-north-hero and portwright. Check `GET /v2/avatar_group.list` rather than trusting any
-number written down here; uploads are free, so attempting one is a cheaper way to learn
-the current limit than reasoning about the plan.
+Practical consequences: onboarding a character costs ~$1.32, and so does every re-upload
+when its art changes. Never loop uploads to probe a limit. And the old "delete-then-upload
+per render" fallback — floated when slots were capped at 3 — would have cost $1.32 *per
+render*; it is a bad idea on cost grounds alone, independent of the slot question.
+
+**Photo avatars are UNLIMITED on this account — slots are not a constraint.** Settled
+2026-10-09 three ways: HeyGen's help article ("Free users can create up to 3 unique photo
+avatars, while Creator, Team and Enterprise users have Unlimited photo avatar slots"), the
+pricing page (Free "Up to 3", Creator $29/mo "Unlimited"), and empirically — twelve groups
+created back to back, no refusal, then cleaned up. The $29/mo Creator subscription is live
+and doing its job.
+
+What is **not** unlimited: **Custom Video Avatars** (digital twins built from video) — 1 on
+Free/Creator, 5+ on Business, 10+ on Enterprise. This pipeline uses photo avatars, so that
+cap does not apply. Don't be put off by digital-twin numbers in the pricing table.
+
+Historical, because it still shapes the code: on the free tier the quota counted avatar
+**GROUPS**, not talking photos, and deleting a photo returned 200 while leaving its group
+behind — which is why cleanup targets the group. `talking_photo_id()` now uploads **first**
+and deletes the old group **after**; the old delete-first order existed only to free a slot
+and would destroy a working avatar if the upload then failed.
+
+The API does not report the cap. Any "N/3" you see in older notes was an assumed
+denominator written in the shape of a measurement, not something HeyGen returned.
 
 Gate conventions across the fleet, all opt-in and all dry/safe by default:
 `local81 --apply`, tee-empire `--live`, clemtock cinematic `confirm=True`.

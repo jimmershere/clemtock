@@ -12,19 +12,25 @@ This module owns the two fiddly parts:
    `character.json` by `sprites-from-character.py`, and flatten the transparency —
    a PNG alpha channel is not a background.
 
-2. **The cache, and cleaning up after it.** Every upload creates a new photo avatar
-   *group*, and the plan caps those — not at N characters, at N groups. Caching the id in
-   `brands/<slug>/heygen.json` stops us re-uploading on every render, but each time the
-   artwork legitimately changes we burn another slot.
+2. **The cache.** Every upload creates a new photo avatar *group*. Caching the id in
+   `brands/<slug>/heygen.json` stops us re-uploading on every render.
 
-   The cap was 3 when this was written and is higher on Creator: a fourth group uploaded
-   cleanly on 2026-10-07. Do not hard-code the number — ask
-   `GET /v2/avatar_group.list`, or just attempt the upload, which costs nothing.
+   **Photo avatars are unlimited on this account** — verified 2026-10-09 three ways:
+   HeyGen's help article ("Free users can create up to 3 unique photo avatars, while
+   Creator, Team and Enterprise users have Unlimited photo avatar slots"), the pricing
+   page (Free "Up to 3", Creator $29/mo "Unlimited"), and empirically — twelve groups
+   created back to back here with no refusal, then cleaned up.
 
-   Worse, the two are separate resources: deleting the talking photo leaves the group
-   behind, still counting against the quota. Three edits to one character filled the
-   account and blocked a second character entirely (2026-09-24). So on refresh we now
-   delete the **group** the previous id belonged to.
+   So slots are no longer a constraint, and the delete-before-upload dance below is
+   retired. Note what is NOT unlimited: **Custom Video Avatars** (digital twins built
+   from video) stay capped — 1 on Free/Creator, 5+ on Business, 10+ on Enterprise. This
+   pipeline uses photo avatars, so that cap does not bite us.
+
+   History, kept because it explains the shape of this code: on the free tier the quota
+   counted **groups**, not photos, and the two are separate resources — deleting the
+   talking photo left the group behind, still counting. Three edits to one character
+   filled the account and blocked a second character entirely (2026-09-24). That is why
+   cleanup targets the *group*. It is now housekeeping rather than a precondition.
 
 Quality note, measured: this produces genuinely professional lip-sync — real lip shapes,
 visible teeth, jaw and beard moving with the speech — at **~$0.019 per second of video**
@@ -137,24 +143,35 @@ def talking_photo_id(provider, slug: str, *, refresh: bool = False) -> str:
         except json.JSONDecodeError:
             pass
 
-    # The art changed (or a refresh was forced), so the previous upload is now dead
-    # weight holding one of only three slots. Release it BEFORE uploading the
-    # replacement, or the upload fails on a quota we are ourselves occupying.
+    # The art changed (or a refresh was forced). Read the previous id, but do NOT release
+    # it yet: upload FIRST, delete AFTER.
+    #
+    # The old order — delete, then upload — existed only to free a slot on the 3-avatar
+    # free tier, where the upload would otherwise fail against a quota we were ourselves
+    # occupying. Creator makes photo avatars unlimited (verified three ways 2026-10-09:
+    # HeyGen's own help article and pricing page both say so, and 12 groups were created
+    # back-to-back here without a refusal), so that reason is gone — and the old order is
+    # actively unsafe. A failed or interrupted upload left the brand with no avatar at
+    # all, having already destroyed the working one.
     stale = ""
     if cache_path.is_file():
         try:
             stale = json.loads(cache_path.read_text(encoding="utf-8")).get("talking_photo_id", "")
         except json.JSONDecodeError:
             stale = ""
-    if stale:
-        freed = delete_group(provider, stale)
-        print(f"heygen: released previous avatar group {stale[:12]}… "
-              f"({'ok' if freed else 'failed — may need clearing by hand'})")
 
     import tempfile
     with tempfile.TemporaryDirectory() as tmp:
         portrait = make_portrait(slug, Path(tmp) / "portrait.png")
         tp = provider.upload_talking_photo(portrait)
+
+    # Only now that a replacement exists is the old one safe to drop. Tidiness, not
+    # quota — and deletes are free (measured 2026-10-09), unlike uploads at ~79 credits
+    # / ~$1.32 each. A failure here costs nothing but a stray group.
+    if stale and stale != tp:
+        freed = delete_group(provider, stale)
+        print(f"heygen: released previous avatar group {stale[:12]}… "
+              f"({'ok' if freed else 'failed — harmless, clear it by hand if you care'})")
     cache_path.write_text(json.dumps(
         {"talking_photo_id": tp, "fingerprint": fp, "source": img.name}, indent=2) + "\n",
         encoding="utf-8")
