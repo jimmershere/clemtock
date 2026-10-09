@@ -134,7 +134,17 @@ start building it.
 
 ## Open questions — do not guess
 
-- **`michael` and `north-hero` carry PLACEHOLDER stock voices, not clones** (see each
+- **`north-hero` still carries a PLACEHOLDER stock voice, not a clone** (see its
   `voice.json` note). Confirm or replace before any client work.
+- **`michael` is now a real clone, but from a 4.72s sample** — HeyGen asks 30s minimum
+  and 1-3 minutes ideal. Pitch matches (142.9 Hz against his real 140.4 Hz, +31 cents;
+  the stock voice it replaced was 661 cents low), but timbre and cadence are built from
+  very little. jimmer is recording 30s+ for a proper re-clone — do that when it arrives.
+  Cloning costs no credits and Creator allows 40, so re-cloning is free.
+
+A voice lives in `brands/<slug>/voice.json` and `--brand` reads it. Do **not** hard-code
+a `--voice-id` in a build script: that file sat there saying "PLACEHOLDER, replace before
+client work" while nothing read it, and a known-wrong stock voice shipped in three
+finished ads as a result.
 - Whether the synthesised engine-crank SFX in the "Ran When Parked" spot gets replaced
   with a licensed effect. It is the weakest element in that ad and it is a one-line swap.

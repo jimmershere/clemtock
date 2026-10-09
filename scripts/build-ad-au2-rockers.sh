@@ -12,10 +12,17 @@
 #   bash scripts/build-ad-au2-rockers.sh --render       # re-render the VO — COSTS ~$1.50
 #   CAPTIONS=0 bash scripts/build-ad-au2-rockers.sh     # no burned-in captions
 #
-# ON LENGTH — read before "fixing" this to 30s. The approved script is 102 spoken words
-# and HeyGen reads it in 39.82s with ZERO internal pauses (silencedetect finds no gap
-# over 0.10s at -20dB, measured 2026-10-09). There is no slack to tighten: a 30s cut
-# needs ~26 words removed from the copy, which is the client's call, not a build flag.
+# ON LENGTH. The approved script is 102 spoken words and there is ZERO internal silence
+# to tighten (silencedetect finds no gap over 0.10s at -20dB). So the runtime is set
+# entirely by the VOICE's speaking rate, and the two differ far more than expected:
+#
+#   stock "Mysterious Michael"   39.82s   0.3904 s/word
+#   Michael's clone              32.30s   0.3167 s/word   -- 19% faster
+#
+# Switching to the clone took the spot from 39.7s to 32.2s without touching a word.
+# Reaching 30.0s now needs ~8 words out, not ~26. Still the client's call, not a flag.
+# Everything downstream is word-proportional against the measured VO, so a voice change
+# re-times the shots, the captions and the end card on its own.
 # See the user-facing notes for the specific proposed trim.
 set -euo pipefail
 
